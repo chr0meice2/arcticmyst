@@ -54,7 +54,7 @@ static const char DOMAIN[]="deeptide.com";
 static const char FAIL[]="[NA]";
 static const char PA_MD5[]="ab50d8d707b97712178a92bbac74ccc2a5699eb41c17aa77f713ff3e568dcedb";
 static const char PA_PATH[]="C:\\programdata\\arcticmyst\\paexec.exe";
-static const char MAIN_MD5[]="3102a83cf0866eb7ee03a58197eff2209190f5c9514079f1544f2b7ba601fe4d";
+static const char MAIN_MD5[]="6a09cd241e75946f8b3bf50318d6dd709088a2052ca662ec6976d75c025549e4";
 static const char MAIN_PATH[]="C:\\programdata\\arcticmyst\\arcticmyst.exe";
 static const char UPG_PATH[]="C:\\programdata\\arcticmyst\\mystinstaller.exe";
 static TCHAR TUPG_PATH[]=_T("C:\\programdata\\arcticmyst\\paexec.exe -s -i -d C:\\programdata\\arcticmyst\\mystinstaller.exe /VERYSILENT /NORESTART /SUPPRESSMSGBOXES");
@@ -380,7 +380,7 @@ DWORD WINAPI UpdateThread (LPVOID lpParam)
 		//|2:https://deeptide.com/mystinstaller.exe:98fccbcfe58d5c5f4698a6a7b3e8ea96|	
 
 
-		std::string RootResponse=PCRE2_Extract_One_Submatch("^(\\x7c\\d{1,5}\\x3a\\x2f[a-z\\d\\x2e]+\\x3a[a-f\\d]{32}\\x7c)$",MyVersionReply,true);
+		std::string RootResponse=PCRE2_Extract_One_Submatch("^(\\x7c\\d{1,5}\\x3a\\x2f[a-z\\d\\x2e]+\\x3a[a-f\\d]{64}\\x7c)$",MyVersionReply,true);
 
 		//logdata(RootResponse.c_str());
 
@@ -399,17 +399,17 @@ DWORD WINAPI UpdateThread (LPVOID lpParam)
 			goto Failed2;
 		}
 
-		ExtractionVersion=PCRE2_Extract_One_Submatch("^\\x7c(\\d{1,5})\\x3a\\x2f[a-z\\d\\x2e]+\\x3a[a-f\\d]{32}\\x7c$",RootResponse,false);
+		ExtractionVersion=PCRE2_Extract_One_Submatch("^\\x7c(\\d{1,5})\\x3a\\x2f[a-z\\d\\x2e]+\\x3a[a-f\\d]{64}\\x7c$",RootResponse,false);
 		if(   ( ExtractionVersion.empty()   )  ||  (ExtractionVersion==FAIL)  )
 		{
 			goto Failed2;
 		}
-		ExtractURL=PCRE2_Extract_One_Submatch("^\\x7c\\d{1,5}\\x3a(\\x2f[a-z\\d\\x2e]+)\\x3a[a-f\\d]{32}\\x7c$",RootResponse,false);
+		ExtractURL=PCRE2_Extract_One_Submatch("^\\x7c\\d{1,5}\\x3a(\\x2f[a-z\\d\\x2e]+)\\x3a[a-f\\d]{64}\\x7c$",RootResponse,false);
 		if(   ( ExtractURL.empty()   )  ||  (ExtractURL==FAIL)  )
 		{
 			goto Failed2;
 		}
-		ExtractHash=PCRE2_Extract_One_Submatch("^\\x7c\\d{1,5}\\x3a\\x2f[a-z\\d\\x2e]+\\x3a([a-f\\d]{32})\\x7c$",RootResponse,false);
+		ExtractHash=PCRE2_Extract_One_Submatch("^\\x7c\\d{1,5}\\x3a\\x2f[a-z\\d\\x2e]+\\x3a([a-f\\d]{64})\\x7c$",RootResponse,false);
 		if(   ( ExtractHash.empty()   )  ||  (ExtractHash==FAIL)  )
 		{
 			goto Failed2;
