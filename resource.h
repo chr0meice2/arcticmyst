@@ -1,0 +1,38 @@
+#ifndef RESOURCE_H
+#define RESOURCE_H
+#define MAINICON 444
+#define RED 655
+
+//#define WHIRLPOOL 3027
+//#define SERPENT 3028
+#define ZMENU 777
+#define MENU_ABOUT 888
+#define ZBOX 1001
+
+#define ALERTLOGBOX 1353
+#define ALERTTEXT 1355
+#define MENU_LOG 1356
+#define ABOUT_ATKBTN 3334
+
+#define STC_BMP 3342
+#define BMP_TEST 3341
+#define MYDONATE 3340
+//#define MYBUY 3335
+#define MYMINIBUTTON 3333
+#define MYCLOSER 1692
+
+#define CRYPTOBOX 5001
+#define MENU_CRYPTO 5002
+
+#define CRYPTOTEXT 5006
+#define PASSPHRASE 5007
+
+#define ENC 5003
+#define DEC 5004
+#define CMIN 5005
+
+#define BGITHUB 1302
+#define USERTEST 1301
+#define LICTEST 1300
+#define LCDATA 5011
+#endif

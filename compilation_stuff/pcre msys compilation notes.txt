@@ -1,0 +1,8 @@
+export PATH=${PATH}:/c/msys64/mingw64/bin
+
+CFLAGS = -Ofast
+LDFLAGS = -Wl,-s -Wl,--gc-sections
+
+
+
+./configure --disable-shared

@@ -1,0 +1,23 @@
+/* THIS FILE WILL BE OVERWRITTEN BY DEV-C++ */
+/* DO NOT EDIT ! */
+
+#ifndef MYSTSVC_PRIVATE_H
+#define MYSTSVC_PRIVATE_H
+
+/* VERSION DEFINITIONS */
+#define VER_STRING	"9.1.9.1"
+#define VER_MAJOR	9
+#define VER_MINOR	1
+#define VER_RELEASE	9
+#define VER_BUILD	1
+#define COMPANY_NAME	""
+#define FILE_VERSION	"9.1.9.1"
+#define FILE_DESCRIPTION	"ArcticMyst² SecOps"
+#define INTERNAL_NAME	""
+#define LEGAL_COPYRIGHT	""
+#define LEGAL_TRADEMARKS	""
+#define ORIGINAL_FILENAME	""
+#define PRODUCT_NAME	""
+#define PRODUCT_VERSION	"9.1.9.1"
+
+#endif /*MYSTSVC_PRIVATE_H*/

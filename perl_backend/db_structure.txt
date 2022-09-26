@@ -1,0 +1,35 @@
+create table exe
+(
+	hash varchar(64) not null primary key,
+	thedate datetime not null,
+	compname varchar(32) not null,
+	username varchar(32) not null,
+	ip varchar(45) not null,
+	exe varchar(768) not null,
+	filesha256 varchar(64) not null,
+	myversion varchar(9) not null,
+	cmdline varchar(8193) not null
+);
+
+create table reg
+(
+	hash varchar(64) not null primary key,
+	thedate datetime not null,
+	compname varchar(32) not null,
+	username varchar(32) not null,
+	ip varchar(45) not null,
+	myversion varchar(9) not null,
+	valname varchar(256) not null,
+	valdata varchar(8193) not null
+);
+
+create table hookops
+(
+	hash varchar(64) not null primary key,
+	thedate datetime not null,
+	compname varchar(32) not null,
+	username varchar(32) not null,
+	ip varchar(45) not null,
+	myst text not null,
+	myversion varchar(9) not null
+);

@@ -1,0 +1,34 @@
+/* THIS FILE WILL BE OVERWRITTEN BY DEV-C++ */
+/* DO NOT EDIT! */
+
+#include <windows.h> // include for version info constants
+
+
+//
+// TO CHANGE VERSION INFORMATION, EDIT PROJECT OPTIONS...
+//
+1 VERSIONINFO
+FILEVERSION 9,1,9,1
+PRODUCTVERSION 9,1,9,1
+FILETYPE VFT_APP
+{
+  BLOCK "StringFileInfo"
+  {
+    BLOCK "040904E4"
+    {
+      VALUE "CompanyName", ""
+      VALUE "FileVersion", "9.1.9.1"
+      VALUE "FileDescription", "ArcticMyst² SecOps"
+      VALUE "InternalName", ""
+      VALUE "LegalCopyright", ""
+      VALUE "LegalTrademarks", ""
+      VALUE "OriginalFilename", ""
+      VALUE "ProductName", ""
+      VALUE "ProductVersion", "9.1.9.1"
+    }
+  }
+  BLOCK "VarFileInfo"
+  {
+    VALUE "Translation", 0x0409, 1252
+  }
+}

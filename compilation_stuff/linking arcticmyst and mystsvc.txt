@@ -1,0 +1,6 @@
+
+mystsvc
+-Wl,-Bstatic,-lwinpthread -Wl,--no-whole-archive,--stack,1048576,--gc-sections
+
+arcticmyst
+-Wl,-Bstatic,-lwinpthread -Wl,--no-whole-archive,--stack,1048576,--gc-sections

@@ -1,0 +1,20 @@
+export PATH=${PATH}:/c/msys64/mingw64/bin
+--enable-tls13 for ./configure...
+
+make file ...
+
+
+LIBS = -lws2_32
+LDFLAGS =  -Wl,-s -Wl,--gc-sections
+CFLAGS =  -O2  -Wno-pragmas -Wall -Wno-strict-aliasing -Wextra -Wunknown-pragmas --param=ssp-buffer-size=1 -Waddress -Warray-bounds -Wbad-function-cast -Wchar-subscripts -Wcomment -Wfloat-equal -Wformat-security -Wformat=2 -Wmaybe-uninitialized -Wmissing-field-initializers -Wmissing-noreturn -Wmissing-prototypes -Wnested-externs -Wnormalized=id -Woverride-init -Wpointer-arith -Wpointer-sign -Wredundant-decls -Wshadow -Wsign-compare -Wstrict-overflow=1 -Wswitch-enum -Wundef -Wunused -Wunused-result -Wunused-variable -Wwrite-strings -fwrapvv
+
+
+
+to Makefile line 2239
+
+
+./configure --enable-tls13 --disable-errorstrings --disable-oldtls --enable-static --disable-crypttests --disable-examples
+
+
+
+AM_CFLAGS =  -DWOLFSSL_STATIC_DH -DWOLFSSL_STATIC_RSA -DNO_WOLFSSL_SERVER
