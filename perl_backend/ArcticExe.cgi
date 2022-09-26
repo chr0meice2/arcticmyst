@@ -64,7 +64,7 @@ my $THEUA=$ENV{'HTTP_USER_AGENT'};
 
                 $COMP=lc($1);
                 $USER=lc($2);
-                                 my $COMPANDDATE=$COMP . $USER . $exe . $mysha256;
+                                 my $COMPANDDATE=$COMP . $USER . $exe . $cmdline . $mysha256;
                 my $THEHASH=sha256_hex($COMPANDDATE);
                 if($THEHASH !~ /^[a-f0-9]{64}$/ )
                 {
