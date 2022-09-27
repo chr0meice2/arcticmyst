@@ -54,10 +54,10 @@ using namespace CryptoPP;
 
 static const char VER_STRING[]="20220925a";
 
-static const char UN_FULL[]="\\Device\\HarddiskVolume3\\programdata\\arcticmyst\\unins000.exe";
+static const char UN_FULL[]="^\\x5cDevice\\x5cHarddiskVolume\\d+\\x5cprogramdata\\x5carcticmyst\\x5cunins000\\x2eexe$";
 static const char UN_SHORT[]="unins000.exe";
 
-static const char MIN_FULL[]="\\Device\\HarddiskVolume3\\programdata\\arcticmyst\\mystinstaller.exe";
+static const char MIN_FULL[]="^\\x5cDevice\\x5cHarddiskVolume\\d+\\x5cprogramdata\\x5carcticmyst\\x5cmystinstaller\\x2eexe$";
 static const char MIN_SHORT[]="mystinstaller.exe";
 
 const char injectLibraryPath64[]="C:\\programdata\\arcticmyst\\MystHookProc64.dll";
@@ -1256,7 +1256,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT message,WPARAM wParam,LPARAM lPar
 				if(!FP.empty() )
 				{
 					//case insensitive check against FULL PATH
-					if( comparei(UN_FULL,FP)==true )
+					if( fastmatch(UN_FULL,FP)==true )
 					{
 						//call cleanup which UNINJECTS and exists cleanly (uninstaller taskkills after 30 seconds)
 						//OutputDebugStringA("before cleanup" );
@@ -1275,7 +1275,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT message,WPARAM wParam,LPARAM lPar
 				if(!FP.empty() )
 				{
 					//case insensitive check against FULL PATH
-					if( comparei(MIN_FULL,FP)==true )
+					if( fastmatch(MIN_FULL,FP)==true )
 					{
 						//call cleanup which UNINJECTS and exists cleanly (uninstaller taskkills after 30 seconds)
 						//OutputDebugStringA("before cleanup" );
@@ -4375,7 +4375,16 @@ static DWORD __stdcall InjectProcessThread(LPVOID lp)
 {
 	UNREFERENCED_PARAMETER(lp);
 
+	//while(1)
+	//{
+	//mySleep(1);
+
 	myEnterCriticalSection(&InjectCritical);
+	
+	//if(!p32.empty())
+	//p32.clear();
+	//if(!p64.empty())
+	//p64.clear();
 
 	SecEngProcEnumerator_All(p32,p64);
 
@@ -4427,6 +4436,8 @@ static DWORD __stdcall InjectProcessThread(LPVOID lp)
 
 	myLeaveCriticalSection(&InjectCritical);
 
+
+//	} //infiite inject loop
 
 //	mySleep(60000); // for testing, uninject after 2 mins
 
