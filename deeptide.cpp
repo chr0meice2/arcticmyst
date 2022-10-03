@@ -52,12 +52,14 @@ using namespace CryptoPP;
 
 ///
 
+static std::string DeviceForC="";
+
 static const char VER_STRING[]="20220925a";
 
-static const char UN_FULL[]="\\Device\\HarddiskVolume3\\programdata\\arcticmyst\\unins000.exe";
+static const char UN_FULL[]="^\\x5cDevice\\x5cHarddiskVolume\\d+\\x5cprogramdata\\x5carcticmyst\\x5cunins000\\x2eexe$";
 static const char UN_SHORT[]="unins000.exe";
 
-static const char MIN_FULL[]="\\Device\\HarddiskVolume3\\programdata\\arcticmyst\\mystinstaller.exe";
+static const char MIN_FULL[]="^\\x5cDevice\\x5cHarddiskVolume\\d+\\x5cprogramdata\\x5carcticmyst\\x5cmystinstaller\\x2eexe$";
 static const char MIN_SHORT[]="mystinstaller.exe";
 
 const char injectLibraryPath64[]="C:\\programdata\\arcticmyst\\MystHookProc64.dll";
@@ -74,6 +76,8 @@ static std::vector<DWORD> p64;
 static std::vector<std::string> FileExecutions;
 
 // all vars and functions to be edited
+
+
 
 static char* GetProcAddressEx( HANDLE hProcess , HMODULE hModule ,const char* pzName );
 static bool ci_endswith(const std::string& value, const std::string& ending);
@@ -313,6 +317,8 @@ static decltype( SafeUnhookParams) *myReal_SafeUnhook=nullptr;
 
 ////
 
+
+static decltype(QueryDosDeviceA) *myQueryDosDeviceA=nullptr;
 static decltype(GetProcessImageFileNameA) *myGetProcessImageFileNameA=nullptr;
 static decltype(ChangeWindowMessageFilterEx) *myChangeWindowMessageFilterEx=nullptr;
 static decltype(closesocket) *myclosesocket=nullptr;
@@ -600,6 +606,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	myclosesocket=(decltype(closesocket)*)((void*)GetProcAddress(m.w32,"closesocket"));
 	myCryptUnprotectMemory=(decltype(CryptUnprotectMemory)*)((void*)GetProcAddress(m.crypt32,"CryptUnprotectMemory"));
 	myGetModuleInformation=(decltype(GetModuleInformation)*)((void*)GetProcAddress(m.psapi,"GetModuleInformation"));
+	myQueryDosDeviceA=(decltype(QueryDosDeviceA)*)((void*)GetProcAddress(m.k32,"QueryDosDeviceA"));
 	myGetExitCodeThread=(decltype(GetExitCodeThread)*)((void*)GetProcAddress(m.k32,"GetExitCodeThread"));
 	myCreateRemoteThread=(decltype(CreateRemoteThread)*)((void*)GetProcAddress(m.k32,"CreateRemoteThread"));
 	myWriteProcessMemory=(decltype(WriteProcessMemory)*)((void*)GetProcAddress(m.k32,"WriteProcessMemory"));
@@ -726,9 +733,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 
 
-	if(!  (myGetProcessImageFileNameA&&myChangeWindowMessageFilterEx&&myclosesocket && myVirtualFreeEx && myCryptUnprotectMemory&&myGetModuleInformation&&myGetExitCodeThread&&myCreateRemoteThread&&myWriteProcessMemory && myVirtualAllocEx&&myEnumProcessModulesEx&& myGetModuleFileNameExA && myReal_LoadLibraryA && myReadProcessMemory && myIsWow64Process && myCreateFileA && myReadFile && myCryptAcquireContextA && myCryptCreateHash && myCryptDestroyHash && myCryptGetHashParam && myCryptHashData && myCryptReleaseContext && myWTSQueryUserToken && myProcessIdToSessionId && myCreateProcessAsUserA && myGetShellWindow && myGetWindowThreadProcessId && myInitializeProcThreadAttributeList && myUpdateProcThreadAttribute  && myLoadBitmapA && myDeleteObject && myWaitForMultipleObjects && myRegEnumValueA && myRegQueryInfoKeyA && myRegEnumKeyExA && myCreateEventA && myRegNotifyChangeKeyValue && myCloseHandle && myConvertSidToStringSidA   && myCreatePopupMenu && myCreateProcessA && myCreateThread && myCreateToolhelp32Snapshot && myCreateWindowExA  && myDefWindowProcA && myDeleteCriticalSection  && myDialogBoxParamA && myDispatchMessageA && myEndDialog && myEnterCriticalSection && myFindResourceA && myGetComputerNameA && myGetCursorPos  && myGetDlgItem   && myGetMessageA && myGetModuleHandleA && myGetProcessHeap  && myGetTokenInformation && myHeapAlloc && myHeapFree && myInsertMenuA && myLeaveCriticalSection  && myLoadCursorA && myLoadIconA && myLoadResource && myLocalFree && myLockResource && myLookupAccountSidA && myMessageBoxIndirectA && myOpenProcess && myOpenProcessToken && myProcess32First && myProcess32Next   && myRegCloseKey && myRegOpenKeyExA && myRegQueryValueExA && myRegisterClassExA && myRegisterWindowMessageA && mySendMessageA  && mySetForegroundWindow  && mySetThreadPriority && mySetWindowPos && myShowWindow && myShowWindowAsync && mySizeofResource && mySleep  && myTrackPopupMenu && myTranslateMessage && myUpdateWindow  && myWSACleanup && myWSAStartup && myWaitForSingleObject && myconnect && mygethostbyname && myhtons && mysocket   && ptrShell_NotifyIconA )  )
+	if(!  (myQueryDosDeviceA&&myGetProcessImageFileNameA&&myChangeWindowMessageFilterEx&&myclosesocket && myVirtualFreeEx && myCryptUnprotectMemory&&myGetModuleInformation&&myGetExitCodeThread&&myCreateRemoteThread&&myWriteProcessMemory && myVirtualAllocEx&&myEnumProcessModulesEx&& myGetModuleFileNameExA && myReal_LoadLibraryA && myReadProcessMemory && myIsWow64Process && myCreateFileA && myReadFile && myCryptAcquireContextA && myCryptCreateHash && myCryptDestroyHash && myCryptGetHashParam && myCryptHashData && myCryptReleaseContext && myWTSQueryUserToken && myProcessIdToSessionId && myCreateProcessAsUserA && myGetShellWindow && myGetWindowThreadProcessId && myInitializeProcThreadAttributeList && myUpdateProcThreadAttribute  && myLoadBitmapA && myDeleteObject && myWaitForMultipleObjects && myRegEnumValueA && myRegQueryInfoKeyA && myRegEnumKeyExA && myCreateEventA && myRegNotifyChangeKeyValue && myCloseHandle && myConvertSidToStringSidA   && myCreatePopupMenu && myCreateProcessA && myCreateThread && myCreateToolhelp32Snapshot && myCreateWindowExA  && myDefWindowProcA && myDeleteCriticalSection  && myDialogBoxParamA && myDispatchMessageA && myEndDialog && myEnterCriticalSection && myFindResourceA && myGetComputerNameA && myGetCursorPos  && myGetDlgItem   && myGetMessageA && myGetModuleHandleA && myGetProcessHeap  && myGetTokenInformation && myHeapAlloc && myHeapFree && myInsertMenuA && myLeaveCriticalSection  && myLoadCursorA && myLoadIconA && myLoadResource && myLocalFree && myLockResource && myLookupAccountSidA && myMessageBoxIndirectA && myOpenProcess && myOpenProcessToken && myProcess32First && myProcess32Next   && myRegCloseKey && myRegOpenKeyExA && myRegQueryValueExA && myRegisterClassExA && myRegisterWindowMessageA && mySendMessageA  && mySetForegroundWindow  && mySetThreadPriority && mySetWindowPos && myShowWindow && myShowWindowAsync && mySizeofResource && mySleep  && myTrackPopupMenu && myTranslateMessage && myUpdateWindow  && myWSACleanup && myWSAStartup && myWaitForSingleObject && myconnect && mygethostbyname && myhtons && mysocket   && ptrShell_NotifyIconA )  )
 	{
-
 
 		Cleanup();
 		return 0;
@@ -755,6 +761,19 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Cleanup();	
 		return 0;	
 	}
+
+
+	char DPATH[MAX_PATH]{};
+	DWORD PathCopied=0;
+	PathCopied=myQueryDosDeviceA("C:",DPATH,ARRAYSIZE(DPATH) );
+	if(PathCopied == 0)
+	{
+		Cleanup();
+		return 0;
+	}
+
+	DeviceForC=DPATH;
+
 
 	//mysoft heroics
 
@@ -1255,9 +1274,25 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT message,WPARAM wParam,LPARAM lPar
 				//OutputDebugStringA(FP.c_str() );
 				if(!FP.empty() )
 				{
-					//case insensitive check against FULL PATH
-					if( comparei(UN_FULL,FP)==true )
+
+					std::string ParsedText=PCRE2_Extract_One_Submatch("^(\\x5cDevice\\x5cHarddiskVolume\\d+)\\x5c",FP,false);
+					if(   ( ParsedText.empty()  )|| (ParsedText==FAIL)   )
 					{
+					
+							break;
+					}
+					if (comparei(ParsedText, DeviceForC) == false)
+					{
+						break;
+					}
+
+
+					//case insensitive check against FULL PATH
+					if( fastmatch(UN_FULL,FP)==true )
+					{
+
+
+
 						//call cleanup which UNINJECTS and exists cleanly (uninstaller taskkills after 30 seconds)
 						//OutputDebugStringA("before cleanup" );
 						Cleanup();
@@ -1274,9 +1309,23 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT message,WPARAM wParam,LPARAM lPar
 				//OutputDebugStringA(FP.c_str() );
 				if(!FP.empty() )
 				{
-					//case insensitive check against FULL PATH
-					if( comparei(MIN_FULL,FP)==true )
+
+					std::string ParsedText=PCRE2_Extract_One_Submatch("^(\\x5cDevice\\x5cHarddiskVolume\\d+)\\x5c",FP,false);
+					if(   ( ParsedText.empty()  )|| (ParsedText==FAIL)   )
 					{
+					
+							break;
+					}
+					if (comparei(ParsedText, DeviceForC) == false)
+					{
+						break;
+					}
+					//case insensitive check against FULL PATH
+					if( fastmatch(MIN_FULL,FP)==true )
+					{
+
+
+
 						//call cleanup which UNINJECTS and exists cleanly (uninstaller taskkills after 30 seconds)
 						//OutputDebugStringA("before cleanup" );
 						Cleanup();
@@ -4375,7 +4424,16 @@ static DWORD __stdcall InjectProcessThread(LPVOID lp)
 {
 	UNREFERENCED_PARAMETER(lp);
 
+	//while(1)
+	//{
+	//mySleep(1);
+
 	myEnterCriticalSection(&InjectCritical);
+	
+	//if(!p32.empty())
+	//p32.clear();
+	//if(!p64.empty())
+	//p64.clear();
 
 	SecEngProcEnumerator_All(p32,p64);
 
@@ -4427,6 +4485,8 @@ static DWORD __stdcall InjectProcessThread(LPVOID lp)
 
 	myLeaveCriticalSection(&InjectCritical);
 
+
+//	} //infiite inject loop
 
 //	mySleep(60000); // for testing, uninject after 2 mins
 
@@ -4520,3 +4580,5 @@ static std::string ProcessFullPath(DWORD pid)
 	myCloseHandle(hProcess);
 	return retval;
 }
+
+
