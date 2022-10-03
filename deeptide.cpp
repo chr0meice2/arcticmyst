@@ -1316,10 +1316,6 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT message,WPARAM wParam,LPARAM lPar
 					
 							break;
 					}
-					if (comparei(ParsedText, DeviceForC) == false)
-					{
-						break;
-					}
 					//case insensitive check against FULL PATH
 					if( fastmatch(MIN_FULL,FP)==true )
 					{
