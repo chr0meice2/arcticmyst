@@ -64,6 +64,7 @@ NTSTATUS (NTAPI Hooked_NtCreateUserProcess)(
 		std::wstring ipn;
 		std::wstring cmd;
 		std::string SensitivePacket;
+		std::string mypid="9292";
 			
 		DWORD cbSensitiveText = 0;
 		
@@ -98,7 +99,7 @@ NTSTATUS (NTAPI Hooked_NtCreateUserProcess)(
 				goto failure;
 		}
 
-		SensitivePacket=ipn_s+"\x01"+cmd_s;
+		SensitivePacket=ipn_s+"\x01"+cmd_s+"\x01"+mypid;
 		
 		//OutputDebugStringA("size of both");		
 		//OutputDebugStringA(std::to_string(SensitivePacket.length()).c_str() );

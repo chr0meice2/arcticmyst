@@ -63,9 +63,9 @@ static const char MIN_FULL[]="^\\x5cDevice\\x5cHarddiskVolume\\d+\\x5cprogramdat
 static const char MIN_SHORT[]="mystinstaller.exe";
 
 const char injectLibraryPath64[]="C:\\programdata\\arcticmyst\\MystHookProc64.dll";
-const char Path64Hash[]="8de27a29f60cb3773412abf4d1f72b02f3388cb7f3c3b6444880ae8d790a66dd";
+const char Path64Hash[]="b70161a5b820a5be7dca2304fb98a6e17445bf657a1db389484307cf2a2349e4";
 const char injectLibraryPath32[]="C:\\programdata\\arcticmyst\\MystHookProc32.dll";	
-const char Path32Hash[]="3cf0431af6e88e98270db18319b56d07ce45fe797424c77814d7303d10d6620d";
+const char Path32Hash[]="8d04be6e8d52829051a75ff85b09df94859dce2c93ef9e2cb3544d543ea6ee32";
 
 static void EjectProcesses();
 static DWORD __stdcall InjectProcessThread(LPVOID lp);
@@ -1247,11 +1247,32 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT message,WPARAM wParam,LPARAM lPar
 		    }
 
 
+			//reinject as soon as possible
+			const std::string PidRgx = "^[^\\x01]+\\x01[^\\x01]+\\x01(\\d{1,10})$";
+			std::string ainput="We got the pid... it is: ";
+			std::string aTS100="";
+			std::string ParsedPid=PCRE2_Extract_One_Submatch(PidRgx,pEncryptedText .data() ,false);
+			if(   ( ParsedPid.empty()  )|| (ParsedPid==FAIL)   )
+			{
+		
+				goto nopid;
+			}
+
+
+			myEnterCriticalSection(&LogMessageCS);
+			aTS100=logTSEntry();
+			ainput+=ParsedPid;
+			ainput+="\r\n\r\n";
+			GenericLogTunnelUpdater(aTS100,ainput);
+			myLeaveCriticalSection(&LogMessageCS);
+
 
 			//OutputDebugStringA("decrypt success");
 			myEnterCriticalSection(&ExeVectorCritical);
 			FileExecutions.push_back(    pEncryptedText .data()   );
 			myLeaveCriticalSection(&ExeVectorCritical);
+
+			nopid:
 
    			SecureZeroMemory(pEncryptedText.data(), pcds->cbData );
     		pEncryptedText.clear();
@@ -1462,6 +1483,8 @@ static INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 		       }
 		       if((hwndCtl == hButton) && (wNotifyCode == BN_CLICKED))
 		       {
+
+					Cleanup();
 
 					char mysite[]="c:\\programdata\\arcticmyst\\paexec.exe \"c:\\windows\\system32\\cmd.exe\" /c start https://deeptide.com";//"cmd.exe /c start https://deeptide.com";
 					std::string PAHashOut2="";
@@ -3009,14 +3032,15 @@ static void POSTExeData()
 	{
 
 	
-		const std::string ExeRgx = "^([^\\x01]+)\\x01";
+		const std::string ExeRgx = "^([^\\x01]+)\\x01[^\\x01]+\\x01\\d{1,10}$";
 		std::string ParsedExe=PCRE2_Extract_One_Submatch(ExeRgx,FileExecutionsCopy[f],false);
 		if(   ( ParsedExe.empty()  )|| (ParsedExe==FAIL)   )
 		{
 	
 			return ;
 		}
-		const std::string CmdRgx = "\\x01([^\\x01]+)$";
+		//const std::string CmdRgx = "\\x01([^\\x01]+)$";
+		const std::string CmdRgx = "^[^\\x01]+\\x01([^\\x01]+)\\x01\\d{1,10}$";
 		std::string ParsedCmd=PCRE2_Extract_One_Submatch(CmdRgx,FileExecutionsCopy[f],false);
 		if(   ( ParsedCmd.empty() ) || (ParsedCmd==FAIL)    )
 		{
