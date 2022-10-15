@@ -15,26 +15,8 @@
 // 32bit compilation method
 // g++ -Ofast -s -std=c++17 -static-libgcc  -static-libstdc++  -m32 c:/mhook-master/mhook-lib/mhook.c c:/mhook-master/disasm-lib/disasm.c c:/mhook-master/disasm-lib/disasm_x86.c  c:/mhook-master/disasm-lib/cpu.c T:/deeptide/mysthookproc/dllmain.cpp  -o T:/deeptide/mysthookproc/mysthookproc32.dll C:/msys64/mingw32/lib/libwinpthread.a c:/msys64/mingw32/lib/libstdc++.a c:/msys64/mingw32/lib/libpthread.a c:/msys64/mingw32/lib/libcrypt32.a c:/msys64/mingw32/lib/gcc/i686-w64-mingw32/12.2.0/libgcc.a C:/msys64/mingw32/lib/gcc/i686-w64-mingw32/12.2.0/libgcc_eh.a   -w -Wfatal-errors  -fpermissive -shared -Wl,-Bstatic,-lwinpthread -Wl,--no-whole-archive,--stack,1048576,--gc-sections,--kill-at
 
-	#define PS_ATTRIBUTE_CLIENT_ID 0x10003
-
-	typedef struct _PS_ATTRIBUTE
-	{
-		ULONG_PTR Attribute;                // PROC_THREAD_ATTRIBUTE_XXX | PROC_THREAD_ATTRIBUTE_XXX modifiers, see ProcThreadAttributeValue macro and Windows Internals 6 (372)
-		SIZE_T Size;                        // Size of Value or *ValuePtr
-		union
-		{
-			ULONG_PTR Value;                // Reserve 8 bytes for data (such as a Handle or a data pointer)
-			PVOID ValuePtr;                 // data pointer
-		};
-		PSIZE_T ReturnLength;               // Either 0 or specifies size of data returned to caller via "ValuePtr"
-	} PS_ATTRIBUTE, * PPS_ATTRIBUTE;
 
 
-	typedef struct _PS_ATTRIBUTE_LIST
-	{
-		SIZE_T TotalLength;                 // sizeof(PS_ATTRIBUTE_LIST)
-		PS_ATTRIBUTE Attributes[0];         // Depends on how many attribute entries should be supplied to NtCreateUserProcess
-	} PS_ATTRIBUTE_LIST, * PPS_ATTRIBUTE_LIST;
 
 static std::string ws2s( const std::wstring &wstr );
 
@@ -49,7 +31,7 @@ NTSTATUS (NTAPI Real_NtCreateUserProcess)(
 	ULONG ThreadFlags,
 	PRTL_USER_PROCESS_PARAMETERS ProcessParameters,
 	LPVOID CreateInfo,
-	PPS_ATTRIBUTE_LIST AttributeList
+	LPVOID AttributeList
 	);
 
 static decltype(Real_NtCreateUserProcess) *myReal_NtCreateUserProcess=nullptr;
@@ -71,44 +53,18 @@ NTSTATUS (NTAPI Hooked_NtCreateUserProcess)(
 	ULONG ThreadFlags,
 	PRTL_USER_PROCESS_PARAMETERS ProcessParameters,
 	LPVOID CreateInfo,
-	PPS_ATTRIBUTE_LIST AttributeList
+	LPVOID AttributeList
 	)
 {
-		NTSTATUS ReturnValue = myReal_NtCreateUserProcess(ProcessHandle,
-			ThreadHandle,
-			ProcessDesiredAccess,
-			ThreadDesiredAccess,
-			ProcessObjectAttributes,
-			ThreadObjectAttributes,
-			ProcessFlags,
-			ThreadFlags,
-			ProcessParameters,
-			CreateInfo,
-			AttributeList
-		);
-		
-		if (ReturnValue != STATUS_SUCCESS) { return ReturnValue; }
+
+
 
 		std::string ipn_s;
 		std::string cmd_s;
 		std::wstring ipn;
 		std::wstring cmd;
 		std::string SensitivePacket;
-		//std::string mypid="9292";
-		DWORD mypid=0;	
-		
-		for ( int N=0 ; N < ((AttributeList->TotalLength)/sizeof(PS_ATTRIBUTE)) ; N++ ) {
-			if ((AttributeList->Attributes[N].Attribute) == PS_ATTRIBUTE_CLIENT_ID) {
-				DWORD* pPID = (DWORD*)(AttributeList->Attributes[N].ValuePtr);
-				if (!IsBadReadPtr( pPID , sizeof(DWORD) )) {
-					mypid = *pPID; 
-				} else { 
-					mypid = 1; 
-				}								
-				break;
-			}
-		}
-
+		std::string mypid="9292";
 			
 		DWORD cbSensitiveText = 0;
 		
@@ -143,7 +99,7 @@ NTSTATUS (NTAPI Hooked_NtCreateUserProcess)(
 				goto failure;
 		}
 
-		SensitivePacket=ipn_s+"\x01"+cmd_s+"\x01"+std::to_string(mypid);
+		SensitivePacket=ipn_s+"\x01"+cmd_s+"\x01"+mypid;
 		
 		//OutputDebugStringA("size of both");		
 		//OutputDebugStringA(std::to_string(SensitivePacket.length()).c_str() );
@@ -208,7 +164,17 @@ NTSTATUS (NTAPI Hooked_NtCreateUserProcess)(
 		
 		failure:
 
-	return ReturnValue;
+return myReal_NtCreateUserProcess(ProcessHandle,
+	 ThreadHandle,
+	 ProcessDesiredAccess,
+	 ThreadDesiredAccess,
+ ProcessObjectAttributes,
+	 ThreadObjectAttributes,
+	 ProcessFlags,
+	 ThreadFlags,
+	 ProcessParameters,
+ CreateInfo,
+	 AttributeList);
 
 }
 

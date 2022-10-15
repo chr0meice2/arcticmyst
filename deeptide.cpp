@@ -63,9 +63,9 @@ static const char MIN_FULL[]="^\\x5cDevice\\x5cHarddiskVolume\\d+\\x5cprogramdat
 static const char MIN_SHORT[]="mystinstaller.exe";
 
 const char injectLibraryPath64[]="C:\\programdata\\arcticmyst\\MystHookProc64.dll";
-const char Path64Hash[]="b70161a5b820a5be7dca2304fb98a6e17445bf657a1db389484307cf2a2349e4";
+const char Path64Hash[]="48147155b1233377faad2b98a634ef8f15539f0883fd00814314be52214b3133";
 const char injectLibraryPath32[]="C:\\programdata\\arcticmyst\\MystHookProc32.dll";	
-const char Path32Hash[]="8d04be6e8d52829051a75ff85b09df94859dce2c93ef9e2cb3544d543ea6ee32";
+const char Path32Hash[]="cbf4e55fba4bf584aab0e2cef400bd8999b8940f428eb260c615d1dec11f5b2c";
 
 static void EjectProcesses();
 static DWORD __stdcall InjectProcessThread(LPVOID lp);
@@ -1272,6 +1272,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT message,WPARAM wParam,LPARAM lPar
 			FileExecutions.push_back(    pEncryptedText .data()   );
 			myLeaveCriticalSection(&ExeVectorCritical);
 
+			InjectProcessThread( (LPVOID)(UINT_PTR)std::stol(ParsedPid) );
 			nopid:
 
    			SecureZeroMemory(pEncryptedText.data(), pcds->cbData );
@@ -4446,7 +4447,7 @@ static void EjectDLL(DWORD nProcessId, const char* wsDLLPath)
 
 static DWORD __stdcall InjectProcessThread(LPVOID lp)
 {
-	UNREFERENCED_PARAMETER(lp);
+	//UNREFERENCED_PARAMETER(lp);
 
 	//while(1)
 	//{
@@ -4458,8 +4459,37 @@ static DWORD __stdcall InjectProcessThread(LPVOID lp)
 	//p32.clear();
 	//if(!p64.empty())
 	//p64.clear();
+	
+	unsigned Start32 = 0 , Start64 = 0;
+	
+	char zMsg[256]{};
+	sprintf(zMsg,"{pid=%p}",lp);
+	OutputDebugString(zMsg);
 
-	SecEngProcEnumerator_All(p32,p64);
+	if (lp) { //new process to inject
+		Start32 = p32.size(); Start64 = p64.size();
+		HANDLE h=myOpenProcess(PROCESS_QUERY_INFORMATION, false, (UINT_PTR)lp);
+			if(h)
+			{	
+				BOOL BitCheck=FALSE;
+				BOOL ret= myIsWow64Process(h,&BitCheck);
+				if(ret!=0)
+				{				
+					if(BitCheck==FALSE)
+					{
+						p32.push_back((UINT_PTR)lp);
+					}
+					else
+					{
+						p64.push_back((UINT_PTR)lp);
+					}
+				}
+	
+			}
+			myCloseHandle(h);
+	} else { //list processes to inject
+		SecEngProcEnumerator_All(p32,p64);
+	}
 
 
 
@@ -4467,7 +4497,7 @@ static DWORD __stdcall InjectProcessThread(LPVOID lp)
   	{
 
 
-		for(unsigned p=0;p<p64.size();++p)
+		for(unsigned p=Start64;p<p64.size();++p)
 		{
 			std::string PAHashOut2="";
 			if( ReadAndHash(injectLibraryPath64,PAHashOut2) == false)
@@ -4488,7 +4518,7 @@ static DWORD __stdcall InjectProcessThread(LPVOID lp)
 	if(! p32.empty()  )
 	{
 
-		for(unsigned p=0;p<p32.size();++p)
+		for(unsigned p=Start32;p<p32.size();++p)
 		{
 			std::string PAHashOut2="";
 			if( ReadAndHash(injectLibraryPath32,PAHashOut2) == false)
