@@ -45,7 +45,9 @@
 #define MAX_VALUE_NAME 16383
 
 
-
+typedef struct ThreadParms {
+	long Pid, Tid;
+} ThreadParms;
 
 
 using namespace CryptoPP;
@@ -63,9 +65,9 @@ static const char MIN_FULL[]="^\\x5cDevice\\x5cHarddiskVolume\\d+\\x5cprogramdat
 static const char MIN_SHORT[]="mystinstaller.exe";
 
 const char injectLibraryPath64[]="C:\\programdata\\arcticmyst\\MystHookProc64.dll";
-const char Path64Hash[]="48147155b1233377faad2b98a634ef8f15539f0883fd00814314be52214b3133";
+const char Path64Hash[]="50f8e4bb8593f24ad212046d3af847e5512c2c60fff159b0a325b2621bc60d90";
 const char injectLibraryPath32[]="C:\\programdata\\arcticmyst\\MystHookProc32.dll";	
-const char Path32Hash[]="cbf4e55fba4bf584aab0e2cef400bd8999b8940f428eb260c615d1dec11f5b2c";
+const char Path32Hash[]="6445e66817f3d04d7921b2e1a81df5e88a6ec2216547b0dd467a41566f4821ab";
 
 static void EjectProcesses();
 static DWORD __stdcall InjectProcessThread(LPVOID lp);
@@ -1248,8 +1250,10 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT message,WPARAM wParam,LPARAM lPar
 
 
 			//reinject as soon as possible
-			const std::string PidRgx = "^[^\\x01]+\\x01[^\\x01]+\\x01(\\d{1,10})$";
-			std::string ainput="We got the pid... it is: ";
+			const std::string PidRgx = "^[^\\x01]+\\x01[^\\x01]+\\x01(\\d{1,10})\\x01\\d{1,10}$";
+			const std::string TidRgx= "^[^\\x01]+\\x01[^\\x01]+\\x01\\d{1,10}\\x01(\\d{1,10})$";
+			std::string ParsedTid;
+			std::string ainput="We got the pid and tid... it is: ";
 			std::string aTS100="";
 			std::string ParsedPid=PCRE2_Extract_One_Submatch(PidRgx,pEncryptedText .data() ,false);
 			if(   ( ParsedPid.empty()  )|| (ParsedPid==FAIL)   )
@@ -1259,9 +1263,19 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT message,WPARAM wParam,LPARAM lPar
 			}
 
 
+			ParsedTid=PCRE2_Extract_One_Submatch(TidRgx,pEncryptedText .data() ,false);
+			if(   ( ParsedTid.empty()  )|| (ParsedTid==FAIL)   )
+			{
+		
+				goto nopid;
+			}
+
+
 			myEnterCriticalSection(&LogMessageCS);
 			aTS100=logTSEntry();
 			ainput+=ParsedPid;
+			ainput+="->";
+			ainput+=ParsedTid;
 			ainput+="\r\n\r\n";
 			GenericLogTunnelUpdater(aTS100,ainput);
 			myLeaveCriticalSection(&LogMessageCS);
@@ -1272,7 +1286,30 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT message,WPARAM wParam,LPARAM lPar
 			FileExecutions.push_back(    pEncryptedText .data()   );
 			myLeaveCriticalSection(&ExeVectorCritical);
 
-			InjectProcessThread( (LPVOID)(UINT_PTR)std::stol(ParsedPid) );
+			{
+				char zBuf[256]{};
+				sprintf(zBuf,"Injecting: %i",(int)std::stol(ParsedPid));
+				OutputDebugString(zBuf);
+			//	mySleep(50000);
+				//InjectProcessThread( (LPVOID)(UINT_PTR)std::stol(ParsedPid) );				
+				DWORD shadeLog;				
+				ThreadParms *pParms = new ThreadParms;
+				pParms->Pid = std::stol(ParsedPid);
+				pParms->Tid = std::stol(ParsedTid);				
+				HANDLE ll=myCreateThread(0,0,InjectProcessThread,pParms,0,&shadeLog);
+				if( ll==0)
+				{
+					delete pParms;	
+					Cleanup();
+					return 0;
+				}
+				(*myCloseHandle)( ll);				
+
+
+				//mySleep(8192);
+				OutputDebugString("Injected");
+			//	mySleep(50000);
+			}
 			nopid:
 
    			SecureZeroMemory(pEncryptedText.data(), pcds->cbData );
@@ -3033,7 +3070,7 @@ static void POSTExeData()
 	{
 
 	
-		const std::string ExeRgx = "^([^\\x01]+)\\x01[^\\x01]+\\x01\\d{1,10}$";
+		const std::string ExeRgx = "^([^\\x01]+)\\x01[^\\x01]+\\x01\\d{1,10}\\x01\\d{1,10}$";
 		std::string ParsedExe=PCRE2_Extract_One_Submatch(ExeRgx,FileExecutionsCopy[f],false);
 		if(   ( ParsedExe.empty()  )|| (ParsedExe==FAIL)   )
 		{
@@ -3041,7 +3078,7 @@ static void POSTExeData()
 			return ;
 		}
 		//const std::string CmdRgx = "\\x01([^\\x01]+)$";
-		const std::string CmdRgx = "^[^\\x01]+\\x01([^\\x01]+)\\x01\\d{1,10}$";
+		const std::string CmdRgx = "^[^\\x01]+\\x01([^\\x01]+)\\x01\\d{1,10}\\x01\\d{1,10}$";
 		std::string ParsedCmd=PCRE2_Extract_One_Submatch(CmdRgx,FileExecutionsCopy[f],false);
 		if(   ( ParsedCmd.empty() ) || (ParsedCmd==FAIL)    )
 		{
@@ -4446,7 +4483,7 @@ static void EjectDLL(DWORD nProcessId, const char* wsDLLPath)
 }
 
 static DWORD __stdcall InjectProcessThread(LPVOID lp)
-{
+{	
 	//UNREFERENCED_PARAMETER(lp);
 
 	//while(1)
@@ -4460,15 +4497,12 @@ static DWORD __stdcall InjectProcessThread(LPVOID lp)
 	//if(!p64.empty())
 	//p64.clear();
 	
-	unsigned Start32 = 0 , Start64 = 0;
-	
-	char zMsg[256]{};
-	sprintf(zMsg,"{pid=%p}",lp);
-	OutputDebugString(zMsg);
-
+	unsigned Start32 = 0 , Start64 = 0;	
+		
+	ThreadParms *pParms = (ThreadParms*)lp;
 	if (lp) { //new process to inject
 		Start32 = p32.size(); Start64 = p64.size();
-		HANDLE h=myOpenProcess(PROCESS_QUERY_INFORMATION, false, (UINT_PTR)lp);
+		HANDLE h=myOpenProcess(PROCESS_QUERY_INFORMATION, false, pParms->Pid );
 			if(h)
 			{	
 				BOOL BitCheck=FALSE;
@@ -4477,11 +4511,11 @@ static DWORD __stdcall InjectProcessThread(LPVOID lp)
 				{				
 					if(BitCheck==FALSE)
 					{
-						p32.push_back((UINT_PTR)lp);
+						p64.push_back(pParms->Pid);
 					}
 					else
 					{
-						p64.push_back((UINT_PTR)lp);
+						p32.push_back(pParms->Pid);
 					}
 				}
 	
@@ -4490,7 +4524,6 @@ static DWORD __stdcall InjectProcessThread(LPVOID lp)
 	} else { //list processes to inject
 		SecEngProcEnumerator_All(p32,p64);
 	}
-
 
 
 	if(! p64.empty()  )
@@ -4535,9 +4568,20 @@ static DWORD __stdcall InjectProcessThread(LPVOID lp)
 
 	}
 
-
+	if (lp) {
+		if ( pParms->Tid > 1 ) {
+			HANDLE h=OpenThread(THREAD_SUSPEND_RESUME , false , pParms->Tid );
+			if (h) { 
+				ResumeThread(h); 
+				myCloseHandle(h);
+			}
+		}
+		delete pParms;
+	}
 
 	myLeaveCriticalSection(&InjectCritical);
+
+	
 
 
 //	} //infiite inject loop

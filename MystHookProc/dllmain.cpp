@@ -54,10 +54,18 @@ NTSTATUS (NTAPI Real_NtCreateUserProcess)(
 
 static decltype(Real_NtCreateUserProcess) *myReal_NtCreateUserProcess=nullptr;
 
+NTSTATUS (NTAPI Real_NtSuspendThread)(	
+	PHANDLE ThreadHandle,	
+	PULONG SuspendCount
+	);
+
+static decltype(Real_NtSuspendThread) *myReal_NtSuspendThread=nullptr;
+
+
 static std::atomic<bool> Free_Real_NtCreateUserProcess=false;
 
-
-
+#define PROCESS_CREATE_FLAGS_SUSPENDED 0x00000200 
+#define THREAD_CREATE_FLAGS_CREATE_SUSPENDED 0x1
 
 
 NTSTATUS (NTAPI Hooked_NtCreateUserProcess)(
@@ -74,6 +82,19 @@ NTSTATUS (NTAPI Hooked_NtCreateUserProcess)(
 	PPS_ATTRIBUTE_LIST AttributeList
 	)
 {
+	
+	DWORD mypid=1 , mytid=0;	
+		
+	//if theres already a flag to suspend then we dont need to do anything
+	//but that means we should NOT resume it either because the caller will do it later	
+	if (ThreadFlags & THREAD_CREATE_FLAGS_CREATE_SUSPENDED) {
+		mytid = 1;
+	} else {
+		//make the thread start paused;
+		ThreadFlags |= THREAD_CREATE_FLAGS_CREATE_SUSPENDED;
+	}
+	
+	
 		NTSTATUS ReturnValue = myReal_NtCreateUserProcess(ProcessHandle,
 			ThreadHandle,
 			ProcessDesiredAccess,
@@ -95,21 +116,26 @@ NTSTATUS (NTAPI Hooked_NtCreateUserProcess)(
 		std::wstring cmd;
 		std::string SensitivePacket;
 		//std::string mypid="9292";
-		DWORD mypid=0;	
+		
 		
 		for ( int N=0 ; N < ((AttributeList->TotalLength)/sizeof(PS_ATTRIBUTE)) ; N++ ) {
 			if ((AttributeList->Attributes[N].Attribute) == PS_ATTRIBUTE_CLIENT_ID) {
 				DWORD* pPID = (DWORD*)(AttributeList->Attributes[N].ValuePtr);
-				if (!IsBadReadPtr( pPID , sizeof(DWORD) )) {
+				//if (!IsBadReadPtr( pPID , sizeof(DWORD) )) {
 					mypid = *pPID; 
-				} else { 
-					mypid = 1; 
-				}								
+				//} else { 
+					//mypid = 1; 
+				//}								
 				break;
 			}
 		}
 
-			
+		
+		if ( (ThreadHandle) && (mytid==0) ) {
+			//myReal_NtSuspendThread( *ThreadHandle , NULL );
+			mytid = GetThreadId(*ThreadHandle);
+		}
+		
 		DWORD cbSensitiveText = 0;
 		
 		LRESULT hr=0;
@@ -117,7 +143,7 @@ NTSTATUS (NTAPI Hooked_NtCreateUserProcess)(
 		COPYDATASTRUCT cds;
 		HWND hwnd=0;
 		
-		DWORD err=0;
+		//DWORD err=0;
 		
 		//stack fart
 		ipn = ProcessParameters->ImagePathName.Buffer;
@@ -143,7 +169,7 @@ NTSTATUS (NTAPI Hooked_NtCreateUserProcess)(
 				goto failure;
 		}
 
-		SensitivePacket=ipn_s+"\x01"+cmd_s+"\x01"+std::to_string(mypid);
+		SensitivePacket=ipn_s+"\x01"+cmd_s+"\x01"+std::to_string(mypid)+"\x01"+std::to_string(mytid);
 		
 		//OutputDebugStringA("size of both");		
 		//OutputDebugStringA(std::to_string(SensitivePacket.length()).c_str() );
@@ -197,11 +223,14 @@ NTSTATUS (NTAPI Hooked_NtCreateUserProcess)(
 			goto failure;
 		}
 		SetLastError(0);
+		OutputDebugStringA("Sending parameters");
 		hr=SendMessageA(hwnd, WM_COPYDATA, (WPARAM)hwnd, (LPARAM)(LPVOID)&cds);		
-		err = GetLastError(); //need to be called RIGHT after the function
-		//OutputDebugStringA("After send" );
-		//OutputDebugStringA(std::to_string(hr).c_str() );	
-		//OutputDebugStringA( std::to_string(err).c_str() );
+		OutputDebugStringA("Parameters sent!");
+		
+		/*err = GetLastError(); //need to be called RIGHT after the function
+		OutputDebugStringA("After send" );
+		OutputDebugStringA(std::to_string(hr).c_str() );	
+		OutputDebugStringA( std::to_string(err).c_str() );*/
 		
 		//clear text that we send just in case :)
 		SecureZeroMemory(SensitivePacket.data(), cbSensitiveText);
@@ -279,6 +308,12 @@ DWORD __stdcall ProcAttachThread(LPVOID l)
 	}
 	myReal_NtCreateUserProcess=(decltype(Real_NtCreateUserProcess)*)((void*)GetProcAddress(m.ntdll,"NtCreateUserProcess"));
 	if(!myReal_NtCreateUserProcess)
+	{
+		return 0;
+	}
+	
+	myReal_NtSuspendThread=(decltype(Real_NtSuspendThread)*)((void*)GetProcAddress(m.ntdll,"NtSuspendThread"));
+	if(!myReal_NtSuspendThread)
 	{
 		return 0;
 	}
