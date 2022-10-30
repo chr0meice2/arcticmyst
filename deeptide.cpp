@@ -1,3 +1,4 @@
+
 #define WINVER 0x0601
 #define _WIN32_WINNT 0x0601
 #include <winsock2.h>
@@ -22,7 +23,7 @@
 #include <unistd.h>
 #include <winuser.h>
 
-
+#include "t:/deeptide/hashes.h"
 #include "c:/cryptopp870/cryptlib.h"
 #include "c:/cryptopp870/filters.h"
 #include "c:/cryptopp870/base64.h"
@@ -49,6 +50,14 @@ typedef struct ThreadParms {
 	long Pid, Tid;
 } ThreadParms;
 
+typedef struct AsyncWaitStruct {
+	DWORD  dwProcPID;
+	HANDLE hWaitHandle;
+	HANDLE ThreadHandle;
+	HANDLE ProcessHandle;
+	LPVOID RemoteData;	
+} AsyncWaitStruct;
+
 
 using namespace CryptoPP;
 
@@ -65,9 +74,9 @@ static const char MIN_FULL[]="^\\x5cDevice\\x5cHarddiskVolume\\d+\\x5cprogramdat
 static const char MIN_SHORT[]="mystinstaller.exe";
 
 const char injectLibraryPath64[]="C:\\programdata\\arcticmyst\\MystHookProc64.dll";
-const char Path64Hash[]="50f8e4bb8593f24ad212046d3af847e5512c2c60fff159b0a325b2621bc60d90";
+const char Path64Hash[]=_hash64; //"ad00800d66e754a48fb17e2b4e5e9906dac1ccc7346dd716b421b4485593ff12";
 const char injectLibraryPath32[]="C:\\programdata\\arcticmyst\\MystHookProc32.dll";	
-const char Path32Hash[]="6445e66817f3d04d7921b2e1a81df5e88a6ec2216547b0dd467a41566f4821ab";
+const char Path32Hash[]=_hash32; //"7b418a575f6659a9e4caf009eb6af34a841eefd3d7a9bc757c7f812d49ba65df";
 
 static void EjectProcesses();
 static DWORD __stdcall InjectProcessThread(LPVOID lp);
@@ -79,7 +88,7 @@ static std::vector<std::string> FileExecutions;
 
 // all vars and functions to be edited
 
-
+static void CALLBACK myAsyncWaitCallback(LPVOID pParm , BOOLEAN TimerOrWaitFired);
 
 static char* GetProcAddressEx( HANDLE hProcess , HMODULE hModule ,const char* pzName );
 static bool ci_endswith(const std::string& value, const std::string& ending);
@@ -1296,6 +1305,8 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT message,WPARAM wParam,LPARAM lPar
 				ThreadParms *pParms = new ThreadParms;
 				pParms->Pid = std::stol(ParsedPid);
 				pParms->Tid = std::stol(ParsedTid);				
+				
+				
 				HANDLE ll=myCreateThread(0,0,InjectProcessThread,pParms,0,&shadeLog);
 				if( ll==0)
 				{
@@ -1303,8 +1314,10 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT message,WPARAM wParam,LPARAM lPar
 					Cleanup();
 					return 0;
 				}
+				//myWaitForSingleObject( ll , 1000 );
 				(*myCloseHandle)( ll);				
-
+				
+				//InjectProcessThread((LPVOID)pParms);
 
 				//mySleep(8192);
 				OutputDebugString("Injected");
@@ -4045,11 +4058,11 @@ static void SecEngProcEnumerator_All(std::vector<DWORD> &ProcID32,std::vector<DW
 	do
 	{
 
-	//	std::string pexe = ProcStruct.szExeFile;
+		//std::string pexe = ProcStruct.szExeFile;
 	//	if (        (comparei("winlogon.exe", pexe) == false) && (comparei("lsass.exe", pexe) == false)    )
 	//	{
-	//	if (        (comparei("cmd.exe", pexe) == true)    )
-	//	{
+		if (1)// (        (comparei("explorer.exe", pexe) == true)   ||    (comparei("cmd.exe", pexe) == true)                    )
+		{
 			HANDLE h=myOpenProcess(PROCESS_QUERY_INFORMATION, false, ProcStruct.th32ProcessID);
 			if(h)
 			{
@@ -4073,7 +4086,7 @@ static void SecEngProcEnumerator_All(std::vector<DWORD> &ProcID32,std::vector<DW
 	
 			}
 			myCloseHandle(h);
-	//	}
+		}
 
 
 
@@ -4230,7 +4243,53 @@ static bool ci_endswith(const std::string& value, const std::string& ending) {
     );
 }
 
+static void CALLBACK myAsyncWaitCallback(LPVOID pParm , BOOLEAN TimerOrWaitFired) {
+	
+	AsyncWaitStruct *p = (AsyncWaitStruct*)pParm;
+	
+	DWORD outCode=0;
+	if (myGetExitCodeThread(p->ThreadHandle,&outCode)==0)
+	{		; //nothing needed will cleanup anyway
+	}
 
+	//printf("%s\n","remoteThreadHandle exit code:");
+	//printf("%X\n",outCode);
+
+	//printf("%s\n","remoteThreadHandle:");
+	//printf("%p\n",remoteThreadHandle);
+
+
+	myCloseHandle(p->ThreadHandle);
+
+
+	if(myVirtualFreeEx(p->ProcessHandle, p->RemoteData,0, MEM_RELEASE)==0)
+	{
+
+		; //nothing needed already cleaning up
+		//printf("%s\nVIRTUALFREEEX FAILED:", std::to_string(procin).c_str()  );
+	}
+	
+
+	if( p->ProcessHandle!=0 && p->ProcessHandle!=INVALID_HANDLE_VALUE)
+	{
+		myCloseHandle(p->ProcessHandle);
+	}
+
+	
+	UnregisterWait( p->hWaitHandle );
+
+	char msg[64];
+	if 	(TimerOrWaitFired) {
+		sprintf(msg,"Timed out injecting process %i",(int)p->dwProcPID);
+	} else {
+		sprintf(msg,"process %i Waited and cleaned up succesfully",(int)p->dwProcPID);
+	}
+	OutputDebugString(msg);	
+
+	delete p;
+
+	return;
+}
 
 
 static void injectDLL(DWORD procin,const char *DLLp)
@@ -4372,47 +4431,23 @@ static void injectDLL(DWORD procin,const char *DLLp)
 	}
 
 	//printf("%s\nBEFORE WAIT:", std::to_string(procin).c_str()  );
+	
+	AsyncWaitStruct *pAsync = new AsyncWaitStruct; 
+	if(pAsync==nullptr)
+	{
+		return;
+	}
+	pAsync->dwProcPID = procin;
+	pAsync->hWaitHandle = 0;//why???
+	pAsync->ThreadHandle = remoteThreadHandle;
+	pAsync->ProcessHandle = processHandle;
+	pAsync->RemoteData = remoteBufferForLibraryPath;
 
-	myWaitForSingleObject(remoteThreadHandle,2000);
-
-	//WaitForSingleObject(remoteThreadHandle,60000*12);
+	RegisterWaitForSingleObject( &(pAsync->hWaitHandle) , remoteThreadHandle , myAsyncWaitCallback , pAsync ,  1000*60 , WT_EXECUTEONLYONCE  );
+	//myWaitForSingleObject(remoteThreadHandle,2000);
 
 	//printf("%s\nAFTER WAIT:", std::to_string(procin).c_str()  );
-
-    DWORD outCode=0;
-	if (myGetExitCodeThread(remoteThreadHandle,&outCode)==0)
-	{
-		; //nothing needed will cleanup anyway
-	}
-
-
-	//printf("%s\n","remoteThreadHandle exit code:");
-	//printf("%X\n",outCode);
-
-	//printf("%s\n","remoteThreadHandle:");
-	//printf("%p\n",remoteThreadHandle);
-
-
-
-	myCloseHandle(remoteThreadHandle);
-
-
-	if(myVirtualFreeEx(processHandle, remoteBufferForLibraryPath,0, MEM_RELEASE)==0)
-	{
-
-		; //nothing needed already cleaning up
-		//printf("%s\nVIRTUALFREEEX FAILED:", std::to_string(procin).c_str()  );
-	}
-
-	
-
-	if(processHandle!=0 && processHandle!=INVALID_HANDLE_VALUE)
-	{
-		myCloseHandle(processHandle);
-	}
-
-
-	//printf("%s\nDone Cleanup injection should have worked:", std::to_string(procin).c_str()  );
+    
 	return;
 }
 

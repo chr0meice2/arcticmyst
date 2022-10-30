@@ -9,11 +9,11 @@
 
 
 // 64bit compilation method
-// g++ -Ofast -s -std=c++17 -static-libgcc  -static-libstdc++  -m64 c:/mhook-master/mhook-lib/mhook.c c:/mhook-master/disasm-lib/disasm.c c:/mhook-master/disasm-lib/disasm_x86.c  c:/mhook-master/disasm-lib/cpu.c T:/deeptide/mysthookproc/dllmain.cpp  -o T:/deeptide/mysthookproc/mysthookproc64.dll C:/msys64/mingw64/lib/libwinpthread.a c:/msys64/mingw64/lib/libstdc++.a c:/msys64/mingw64/lib/libpthread.a c:/msys64/mingw64/lib/libcrypt32.a c:/msys64/mingw64/lib/gcc/x86_64-w64-mingw32/12.2.0/libgcc.a C:/msys64/mingw64/lib/gcc/x86_64-w64-mingw32/12.2.0/libgcc_eh.a    -w -Wfatal-errors  -fpermissive -shared -Wl,-Bstatic,-lwinpthread -Wl,--no-whole-archive,--stack,1048576,--gc-sections
+// g++ -Ofast -s -std=c++17 -static-libgcc  -static-libstdc++ -mwindows -m64 c:/mhook-master/mhook-lib/mhook.c c:/mhook-master/disasm-lib/disasm.c c:/mhook-master/disasm-lib/disasm_x86.c  c:/mhook-master/disasm-lib/cpu.c T:/deeptide/mysthookproc/dllmain.cpp  -o T:/deeptide/mysthookproc/mysthookproc64.dll C:/msys64/mingw64/lib/libwinpthread.a c:/msys64/mingw64/lib/libstdc++.a c:/msys64/mingw64/lib/libpthread.a c:/msys64/mingw64/lib/libcrypt32.a c:/msys64/mingw64/lib/gcc/x86_64-w64-mingw32/12.2.0/libgcc.a C:/msys64/mingw64/lib/gcc/x86_64-w64-mingw32/12.2.0/libgcc_eh.a    -w -Wfatal-errors  -fpermissive -shared -Wl,-Bstatic,-lwinpthread -Wl,--no-whole-archive,--stack,1048576,--gc-sections
 
 
 // 32bit compilation method
-// g++ -Ofast -s -std=c++17 -static-libgcc  -static-libstdc++  -m32 c:/mhook-master/mhook-lib/mhook.c c:/mhook-master/disasm-lib/disasm.c c:/mhook-master/disasm-lib/disasm_x86.c  c:/mhook-master/disasm-lib/cpu.c T:/deeptide/mysthookproc/dllmain.cpp  -o T:/deeptide/mysthookproc/mysthookproc32.dll C:/msys64/mingw32/lib/libwinpthread.a c:/msys64/mingw32/lib/libstdc++.a c:/msys64/mingw32/lib/libpthread.a c:/msys64/mingw32/lib/libcrypt32.a c:/msys64/mingw32/lib/gcc/i686-w64-mingw32/12.2.0/libgcc.a C:/msys64/mingw32/lib/gcc/i686-w64-mingw32/12.2.0/libgcc_eh.a   -w -Wfatal-errors  -fpermissive -shared -Wl,-Bstatic,-lwinpthread -Wl,--no-whole-archive,--stack,1048576,--gc-sections,--kill-at
+// g++ -Ofast -s -std=c++17 -static-libgcc  -static-libstdc++ -mwindows -m32 c:/mhook-master/mhook-lib/mhook.c c:/mhook-master/disasm-lib/disasm.c c:/mhook-master/disasm-lib/disasm_x86.c  c:/mhook-master/disasm-lib/cpu.c T:/deeptide/mysthookproc/dllmain.cpp  -o T:/deeptide/mysthookproc/mysthookproc32.dll C:/msys64/mingw32/lib/libwinpthread.a c:/msys64/mingw32/lib/libstdc++.a c:/msys64/mingw32/lib/libpthread.a c:/msys64/mingw32/lib/libcrypt32.a c:/msys64/mingw32/lib/gcc/i686-w64-mingw32/12.2.0/libgcc.a C:/msys64/mingw32/lib/gcc/i686-w64-mingw32/12.2.0/libgcc_eh.a   -w -Wfatal-errors  -fpermissive -shared -Wl,-Bstatic,-lwinpthread -Wl,--no-whole-archive,--stack,1048576,--gc-sections,--kill-at
 
 	#define PS_ATTRIBUTE_CLIENT_ID 0x10003
 
@@ -54,12 +54,13 @@ NTSTATUS (NTAPI Real_NtCreateUserProcess)(
 
 static decltype(Real_NtCreateUserProcess) *myReal_NtCreateUserProcess=nullptr;
 
+/*
 NTSTATUS (NTAPI Real_NtSuspendThread)(	
 	PHANDLE ThreadHandle,	
 	PULONG SuspendCount
 	);
 
-static decltype(Real_NtSuspendThread) *myReal_NtSuspendThread=nullptr;
+static decltype(Real_NtSuspendThread) *myReal_NtSuspendThread=nullptr;*/
 
 
 static std::atomic<bool> Free_Real_NtCreateUserProcess=false;
@@ -88,12 +89,13 @@ NTSTATUS (NTAPI Hooked_NtCreateUserProcess)(
 	//if theres already a flag to suspend then we dont need to do anything
 	//but that means we should NOT resume it either because the caller will do it later	
 	if (ThreadFlags & THREAD_CREATE_FLAGS_CREATE_SUSPENDED) {
+		OutputDebugStringA("Process is being created suspended.");
 		mytid = 1;
 	} else {
 		//make the thread start paused;
 		ThreadFlags |= THREAD_CREATE_FLAGS_CREATE_SUSPENDED;
-	}
-	
+		OutputDebugStringA("Process is being created normally.");
+	}	
 	
 		NTSTATUS ReturnValue = myReal_NtCreateUserProcess(ProcessHandle,
 			ThreadHandle,
@@ -108,7 +110,12 @@ NTSTATUS (NTAPI Hooked_NtCreateUserProcess)(
 			AttributeList
 		);
 		
-		if (ReturnValue != STATUS_SUCCESS) { return ReturnValue; }
+		if (ReturnValue != STATUS_SUCCESS) { 
+			char msg[64];
+			sprintf(msg,"CreateUserProcess Failed error: %X",ReturnValue);
+			OutputDebugStringA(msg);
+			return ReturnValue; 
+		}
 
 		std::string ipn_s;
 		std::string cmd_s;
@@ -116,7 +123,6 @@ NTSTATUS (NTAPI Hooked_NtCreateUserProcess)(
 		std::wstring cmd;
 		std::string SensitivePacket;
 		//std::string mypid="9292";
-		
 		
 		for ( int N=0 ; N < ((AttributeList->TotalLength)/sizeof(PS_ATTRIBUTE)) ; N++ ) {
 			if ((AttributeList->Attributes[N].Attribute) == PS_ATTRIBUTE_CLIENT_ID) {
@@ -149,11 +155,13 @@ NTSTATUS (NTAPI Hooked_NtCreateUserProcess)(
 		ipn = ProcessParameters->ImagePathName.Buffer;
 		if(ipn.empty() )
 		{
+				OutputDebugStringA("Empty Image path.");				
 				goto failure;
 		}
 		ipn_s=ws2s(ipn);
 		if(ipn_s.empty() )
 		{
+				OutputDebugStringA("wide string conversion failed.");
 				goto failure;
 		}
 		
@@ -161,11 +169,13 @@ NTSTATUS (NTAPI Hooked_NtCreateUserProcess)(
 		cmd= ProcessParameters->CommandLine.Buffer;
 		if(cmd.empty() )
 		{
+				OutputDebugStringA("Empty command line.");				
 				goto failure;
 		}
 		cmd_s=ws2s(cmd);
 		if(cmd_s.empty() )
 		{
+				OutputDebugStringA("wide string conversion failed.");
 				goto failure;
 		}
 
@@ -199,7 +209,7 @@ NTSTATUS (NTAPI Hooked_NtCreateUserProcess)(
 		if (!CryptProtectMemory(SensitivePacket.data(), cbSensitiveText,
 			CRYPTPROTECTMEMORY_CROSS_PROCESS))
 		{
-			//OutputDebugStringA("CPM" );
+			OutputDebugStringA("CPM" );
 			SecureZeroMemory(SensitivePacket.data(), cbSensitiveText);
 			goto failure;
 		}		
@@ -207,7 +217,7 @@ NTSTATUS (NTAPI Hooked_NtCreateUserProcess)(
 		//this will never be empty just like the other one because of the same \1 hehe
 		if(SensitivePacket.empty() )
 		{
-			//OutputDebugStringA("SS Empty" );
+			OutputDebugStringA("SS Empty" );			
 			SecureZeroMemory(SensitivePacket.data(), cbSensitiveText);						
 			goto failure;			
 			
@@ -219,7 +229,7 @@ NTSTATUS (NTAPI Hooked_NtCreateUserProcess)(
 		hwnd=FindWindowA("TideSecOps","TideSecOps");
 		if(hwnd==NULL)
 		{
-			//OutputDebugStringA("hwnd" );
+			OutputDebugStringA("Failed to find window." );
 			goto failure;
 		}
 		SetLastError(0);
@@ -234,8 +244,10 @@ NTSTATUS (NTAPI Hooked_NtCreateUserProcess)(
 		
 		//clear text that we send just in case :)
 		SecureZeroMemory(SensitivePacket.data(), cbSensitiveText);
-		
+		return ReturnValue;
+				
 		failure:
+		OutputDebugStringA("FAILED!");
 
 	return ReturnValue;
 
@@ -293,43 +305,47 @@ extern "C" __declspec(dllexport) WINAPI void SafeUnhook(void *Dummylol)
 	
 }
 
-
-
-
-
-
-
 DWORD __stdcall ProcAttachThread(LPVOID l)
 {
 	
+	char Msg[64];
+	sprintf(Msg,"inside thread: PID = %i",GetCurrentProcessId());
+	OutputDebugStringA(Msg);
+	
 	if(m.success==false)
 	{
+		OutputDebugStringA("Failed to load DLLs (injected DLL)");		
 		return 0;
 	}
 	myReal_NtCreateUserProcess=(decltype(Real_NtCreateUserProcess)*)((void*)GetProcAddress(m.ntdll,"NtCreateUserProcess"));
 	if(!myReal_NtCreateUserProcess)
 	{
+		OutputDebugStringA("Failed to locate NtCreateUserProcess");
 		return 0;
 	}
 	
+	/*
 	myReal_NtSuspendThread=(decltype(Real_NtSuspendThread)*)((void*)GetProcAddress(m.ntdll,"NtSuspendThread"));
 	if(!myReal_NtSuspendThread)
 	{
+		OutputDebugStringA("Failed to locate NtSuspendThread");
 		return 0;
-	}
-	
+	}	
+	*/
 		
-	
 	
 	if (Mhook_SetHook((PVOID*)&myReal_NtCreateUserProcess, Hooked_NtCreateUserProcess))
-	{
-		
+	{			
 		Free_Real_NtCreateUserProcess=true;
+	} else {
+		char Msg[64];
+		sprintf(Msg,"Failed  to hook (%i)",GetCurrentProcessId());
+		OutputDebugStringA(Msg);		
+		return 0;
 	}	
 	
-	
-	
-
+	OutputDebugStringA("Hooked sucessfully!");
+		
 	return 0;
 }
 
@@ -340,9 +356,14 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL,DWORD fdwReason,LPVOID lpvReserved)
 	switch(fdwReason)
 	{
 		case DLL_PROCESS_ATTACH:
-		{
-
+		{			
 			
+			OutputDebugStringA("DLL_PROCESS_ATTACH!");
+			char Msg[64];
+			sprintf(Msg,"before hook: PID = %i",GetCurrentProcessId());
+			OutputDebugStringA(Msg);
+			
+			/*
 			DWORD shadeLog;
 			HANDLE ll=CreateThread(0,0,ProcAttachThread,(LPVOID)hinstDLL,0,&shadeLog);
 			if( ll==0)
@@ -350,7 +371,12 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL,DWORD fdwReason,LPVOID lpvReserved)
 					
 				break;
 			}
-			CloseHandle( ll);	
+			CloseHandle(ll);
+			*/
+			
+			ProcAttachThread((LPVOID)hinstDLL);			
+			
+			OutputDebugStringA("After thread");
 			
 			//puts("test inside dll");
 
