@@ -40,7 +40,7 @@
 #define PCRE2_STATIC
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include "C:/pcre2-10.40/src/pcre2.h"
-#include "C:/curl-7.85.0/include/curl/curl.h"
+#include "C:/curl-7.86.0/include/curl/curl.h"
 
 #define MAX_KEY_LENGTH 255
 #define MAX_VALUE_NAME 16383
@@ -65,7 +65,7 @@ using namespace CryptoPP;
 
 static std::string DeviceForC="";
 
-static const char VER_STRING[]="20220925a";
+static const char VER_STRING[]="20221105a";
 
 static const char UN_FULL[]="^\\x5cDevice\\x5cHarddiskVolume\\d+\\x5cprogramdata\\x5carcticmyst\\x5cunins000\\x2eexe$";
 static const char UN_SHORT[]="unins000.exe";
@@ -1489,7 +1489,7 @@ static INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 		  myLeaveCriticalSection(&MarshallVolatilitySection);
 		  UsrBox+="\r\nComputer Name: ";
 		  UsrBox+=tempcn;
-		  UsrBox+="\r\n\r\nPlease email avery@deeptide.com with the Username and Computer Name above if you decide to donate or you are a business who is interested in our professional monitoring service.\r\n\r\nThe software does not have an exit option by design and for security purposes. Removal can be done via Programs and Features in the Windows control panel.";
+		  UsrBox+="\r\n\r\nPlease email avery@deeptide.com with the Username and Computer Name above if you decide to donate or you are a business who is interested in our professional monitoring service.\r\n\r\nIf you decide to exit the program, you will need to reboot before it can be reloaded.";
 		  mySendMessageA(hUsrTxt,WM_SETTEXT,0,(LPARAM)UsrBox.c_str());
 
 
@@ -1560,7 +1560,7 @@ static INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 		       if((hwndCtl == hButton) && (wNotifyCode == BN_CLICKED))
 		       {
 
-					Cleanup();
+				
 
 					char mysite[]="c:\\programdata\\arcticmyst\\paexec.exe \"c:\\windows\\system32\\cmd.exe\" /c start https://deeptide.com";//"cmd.exe /c start https://deeptide.com";
 					std::string PAHashOut2="";

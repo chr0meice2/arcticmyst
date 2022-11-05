@@ -4,14 +4,14 @@ Name=deeptide
 Type=0
 Ver=2
 ObjFiles=
-Includes=C:\wolfssl-5.5.0
-Libs=C:\wolfssl-5.5.0
+Includes=C:\wolfssl-5.5.3
+Libs=C:\wolfssl-5.5.3
 PrivateResource=deeptide_private.rc
 ResourceIncludes=
 MakeIncludes=
 Compiler=
 CppCompiler=-static -static-libgcc  -static-libstdc++  -DCURL_STATICLIB -std=c++17_@@_
-Linker=C:/pcre2-10.40/.libs/libpcre2-8.a_@@_C:/msys64/MinGW64/lib/libuuid.a_@@_C:/msys64/MinGW64/lib/libws2_32.a_@@_C:/wolfssl-5.5.0/src/.libs/libwolfssl.a_@@_C:/msys64/MinGW64/lib/libwsock32.a_@@_C:/cryptopp870/libcryptopp.a_@@_C:/curl-7.85.0/lib/.libs/libcurl.a_@@_C:/msys64/MinGW64/lib/libws2_32.a_@@_c:/msys64/mingw64/lib/libstdc++.a_@@_c:/msys64/mingw64/lib/libpthread.a_@@_c:/msys64/mingw64/lib/gcc/x86_64-w64-mingw32/12.2.0/libgcc.a_@@_C:/msys64/mingw64/lib/gcc/x86_64-w64-mingw32/12.2.0/libgcc_eh.a_@@_C:/msys64/mingw64/lib/libbcrypt.a_@@_
+Linker=C:/pcre2-10.40/.libs/libpcre2-8.a_@@_C:/msys64/MinGW64/lib/libuuid.a_@@_C:/msys64/MinGW64/lib/libws2_32.a_@@_C:/wolfssl-5.5.3/src/.libs/libwolfssl.a_@@_C:/msys64/MinGW64/lib/libwsock32.a_@@_C:/cryptopp870/libcryptopp.a_@@_C:/curl-7.86.0/lib/.libs/libcurl.a_@@_C:/msys64/MinGW64/lib/libws2_32.a_@@_c:/msys64/mingw64/lib/libstdc++.a_@@_c:/msys64/mingw64/lib/libpthread.a_@@_c:/msys64/mingw64/lib/gcc/x86_64-w64-mingw32/12.2.0/libgcc.a_@@_C:/msys64/mingw64/lib/gcc/x86_64-w64-mingw32/12.2.0/libgcc_eh.a_@@_C:/msys64/mingw64/lib/libbcrypt.a_@@_C:/msys64/mingw64/lib/libcrypt32.a_@@_
 IsCpp=1
 Icon=
 ExeOutput=
