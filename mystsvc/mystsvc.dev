@@ -29,7 +29,7 @@ IncludeVersionInfo=0
 SupportXPThemes=0
 CompilerSet=0
 CompilerSettings=000000c000111000000001000
-UnitCount=1
+UnitCount=2
 
 [VersionInfo]
 Major=9
@@ -52,6 +52,16 @@ SyncProduct=1
 
 [Unit1]
 FileName=main.cpp
+CompileCpp=1
+Folder=
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit2]
+FileName=hashes.h
 CompileCpp=1
 Folder=
 Compile=1

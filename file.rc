@@ -17,6 +17,10 @@ ZMENU MENU
 BEGIN
     POPUP "."
     BEGIN
+        MENUITEM ".",                  MENU_QUIT
+    END
+    POPUP "."
+    BEGIN
         MENUITEM ".",                  MENU_ABOUT
     END
     POPUP "."
@@ -42,7 +46,6 @@ BEGIN
     ICON            RED,0,14,32,20,20
     LTEXT           "ArcticMyst Security (C) 2022 DeepTide, LLC",-1,49,11,300,8,SS_NOPREFIX
     DEFPUSHBUTTON   "Donate",MYDONATE,355,105,105,20,WS_GROUP
-    //PUSHBUTTON   "Buy Monitoring Service",MYBUY,355,135,105,20,WS_GROUP
     PUSHBUTTON   "DeepTide.Com",MYMINIBUTTON,355,135,105,20,WS_GROUP
     PUSHBUTTON   "Github/Source Code",BGITHUB,355,165,105,20,WS_GROUP
     PUSHBUTTON   "Balloon Attack",ABOUT_ATKBTN,355,195,105,20,WS_GROUP

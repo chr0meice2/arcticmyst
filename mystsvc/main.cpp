@@ -28,7 +28,10 @@
 #define PCRE2_STATIC
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include "C:/pcre2-10.40/src/pcre2.h"
+#include "t:/deeptide/mystsvc/hashes.h"
 
+
+static bool AlreadyLoadedMainExe=false;
 
 static  std::atomic< bool>FreeUpgrade=false;
 static CRITICAL_SECTION UpgradeCritical;
@@ -46,15 +49,15 @@ static bool	WSClean=false;
 
 
 const char injectLibraryPath64[]="C:\\programdata\\arcticmyst\\MystHookProc64.dll";
-const char Path64Hash[]="8de27a29f60cb3773412abf4d1f72b02f3388cb7f3c3b6444880ae8d790a66dd";
+const char Path64Hash[]=_hash64;
 const char injectLibraryPath32[]="C:\\programdata\\arcticmyst\\MystHookProc32.dll";	
-const char Path32Hash[]="3cf0431af6e88e98270db18319b56d07ce45fe797424c77814d7303d10d6620d";
+const char Path32Hash[]=_hash32;
 
 static const char DOMAIN[]="deeptide.com";
 static const char FAIL[]="[NA]";
 static const char PA_MD5[]="ab50d8d707b97712178a92bbac74ccc2a5699eb41c17aa77f713ff3e568dcedb";
 static const char PA_PATH[]="C:\\programdata\\arcticmyst\\paexec.exe";
-static const char MAIN_MD5[]="1d23d82fa7655dd69d33a6708f46aa996231a6367fee312c9f5389bb043e978b";
+static const char MAIN_MD5[]=_mainexe;
 static const char MAIN_PATH[]="C:\\programdata\\arcticmyst\\arcticmyst.exe";
 static const char UPG_PATH[]="C:\\programdata\\arcticmyst\\mystinstaller.exe";
 static TCHAR TUPG_PATH[]=_T("C:\\programdata\\arcticmyst\\paexec.exe -s -i -d C:\\programdata\\arcticmyst\\mystinstaller.exe /VERYSILENT /NORESTART /SUPPRESSMSGBOXES");
@@ -311,6 +314,10 @@ DWORD WINAPI ServiceWorkerThread (LPVOID lpParam)
 
 				std::string PAHashOut="";
 				std::string MainHashOut="";
+				if(AlreadyLoadedMainExe==true)
+				{
+					goto failed; //this prevents running it over and over again if user chose to quit main software
+				}
 
 				//make sure EXPLORER is running, not at logon screen or else no GUI would be created
 				if(SecEngProcEnumerator()==0)
@@ -355,6 +362,7 @@ DWORD WINAPI ServiceWorkerThread (LPVOID lpParam)
 				}
 			//	OutputDebugStringA("done run check");
 				LeaveCriticalSection(&UpgradeCritical);
+				AlreadyLoadedMainExe=true; //CreateProcess worked for main EXE -- don't load it over and over
 
 
 		failed:
@@ -393,6 +401,11 @@ DWORD WINAPI UpdateThread (LPVOID lpParam)
 		STARTUPINFO si;
 		PROCESS_INFORMATION pi;
 		unsigned RemoteVersion=0;
+		STARTUPINFO tsi;
+		PROCESS_INFORMATION tpi;
+
+
+			TCHAR KillProc[]="taskkill.exe /IM arcticmyst.exe /F";
 
 		if(   ( RootResponse.empty()   )  ||  (RootResponse==FAIL)  )
 		{
@@ -439,6 +452,10 @@ DWORD WINAPI UpdateThread (LPVOID lpParam)
 			si.cb = sizeof(si);
 			ZeroMemory( &pi, sizeof(pi) );
 
+			ZeroMemory( &tsi, sizeof(tsi) );
+			tsi.cb = sizeof(tsi);
+			ZeroMemory( &tpi, sizeof(tpi) );
+
 			std::string PAHashOut2="";
 			if( ReadAndHash(PA_PATH,PAHashOut2) == false)
 			{
@@ -451,9 +468,17 @@ DWORD WINAPI UpdateThread (LPVOID lpParam)
 
 		//	OutputDebugStringA("upgrade thread before critical");
 		
-			// we need to uninject and run the upgrade while we are sure the arcticmyst.exe isn't being ran over and over in the other thread
+	
 			EnterCriticalSection(&UpgradeCritical);
 		//	OutputDebugStringA("ejecting from svc");
+
+			if( !CreateProcess(NULL,KillProc,NULL,NULL,FALSE,0,0,NULL,&tsi,&tpi))
+			{
+					LeaveCriticalSection(&UpgradeCritical);
+					goto Failed2;
+			}
+
+
 			EjectProcesses();
 		//	OutputDebugStringA("ejecting in svc done");
 			if( !CreateProcess(NULL,TUPG_PATH,NULL,NULL,FALSE,0,0,NULL,&si,&pi))

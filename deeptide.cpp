@@ -1172,6 +1172,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT message,WPARAM wParam,LPARAM lPar
 				case WM_LBUTTONDOWN: 
 					(*myGetCursorPos)(&lpClickPoint);
 					HMENU hPopMenu = (*myCreatePopupMenu)();
+					(*myInsertMenuA)(hPopMenu,0xFFFFFFFF,MF_BYPOSITION|MF_STRING,MENU_QUIT,"Quit");
 					(*myInsertMenuA)(hPopMenu,0xFFFFFFFF,MF_BYPOSITION|MF_STRING,MENU_ABOUT,"About");
 					(*myInsertMenuA)(hPopMenu,0xFFFFFFFF,MF_BYPOSITION|MF_STRING,MENU_LOG,"Security Logs");
 					(*myInsertMenuA)(hPopMenu,0xFFFFFFFF,MF_BYPOSITION|MF_STRING,MENU_CRYPTO,"Serpent Crypto");
@@ -1222,6 +1223,19 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT message,WPARAM wParam,LPARAM lPar
 					}
 
 					break;
+
+				case MENU_QUIT:
+					{
+	
+						Cleanup();
+	
+					}
+
+					break;
+
+
+
+
 				default:
 					return (*myDefWindowProcA)(hwnd, message, wParam, lParam);
 			}

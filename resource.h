@@ -17,9 +17,10 @@
 #define STC_BMP 3342
 #define BMP_TEST 3341
 #define MYDONATE 3340
-//#define MYBUY 3335
+
 #define MYMINIBUTTON 3333
 #define MYCLOSER 1692
+#define MENU_QUIT 1690
 
 #define CRYPTOBOX 5001
 #define MENU_CRYPTO 5002

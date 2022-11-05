@@ -22,9 +22,14 @@ if exist c:\programdata\arcticmyst\mysthookproc64.dll (
 
 FOR /F "delims=" %%i IN ('certUtil -hashfile t:\deeptide\mysthookproc\mysthookproc32.dll SHA256 ^| find /V "hash"') DO set hash=%%i
 echo #define _hash32 "%hash%" >hashes.h
+echo #define _hash32 "%hash%" >t:/deeptide/mystsvc/hashes.h
 
 FOR /F "delims=" %%i IN ('certUtil -hashfile t:\deeptide\mysthookproc\mysthookproc64.dll SHA256 ^| find /V "hash"') DO set hash=%%i
 echo #define _hash64 "%hash%" >>hashes.h
+echo #define _hash64 "%hash%" >>t:/deeptide/mystsvc/hashes.h
+
+FOR /F "delims=" %%i IN ('certUtil -hashfile t:\deeptide\arcticmyst.exe SHA256 ^| find /V "hash"') DO set hash=%%i
+echo #define _mainexe "%hash%" >>t:/deeptide/mystsvc/hashes.h
 
 copy t:\deeptide\mysthookproc\mysthookproc32.dll c:\programdata\arcticmyst\mysthookproc32.dll
 copy t:\deeptide\mysthookproc\mysthookproc64.dll c:\programdata\arcticmyst\mysthookproc64.dll
