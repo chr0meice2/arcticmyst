@@ -63,6 +63,9 @@ using namespace CryptoPP;
 
 ///
 
+static bool FirstRegHKLM=true;
+static bool FirstRegHCKU=true;
+
 static std::string DeviceForC="";
 
 static const char VER_STRING[]="20221105a";
@@ -1219,6 +1222,12 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT message,WPARAM wParam,LPARAM lPar
 						(*myShowWindow)(hwndAlertLogBox,SW_SHOW);
 						(****mySetForegroundWindow)(hwndAlertLogBox);
 						(*mySetWindowPos)(hwndAlertLogBox, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+
+						myEnterCriticalSection(&LogMessageCS);
+						mySendMessageA(hwndAlertLogText, EM_SETSEL, 0, -1); 
+						mySendMessageA(hwndAlertLogText, EM_SETSEL, -1, -1);
+						mySendMessageA(hwndAlertLogText, EM_SCROLLCARET, 0, 0); 
+						myLeaveCriticalSection(&LogMessageCS);
 	
 					}
 
@@ -1300,12 +1309,13 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT message,WPARAM wParam,LPARAM lPar
 			}
 
 
-			myEnterCriticalSection(&LogMessageCS);
+
 			aTS100=logTSEntry();
 			ainput+=ParsedPid;
 			ainput+="->";
 			ainput+=ParsedTid;
 			ainput+="\r\n\r\n";
+			myEnterCriticalSection(&LogMessageCS);
 			GenericLogTunnelUpdater(aTS100,ainput);
 			myLeaveCriticalSection(&LogMessageCS);
 
@@ -1790,6 +1800,7 @@ static INT_PTR CALLBACK LogProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
 
 				 hwndAlertLogBox  = hDlg;		 // Global handle for minimize	 
 				 hwndAlertLogText  = myGetDlgItem(hDlg, ALERTTEXT );   // Global text box handle for send messages to the log box
+
 			 	
           /*hBitmap4 = myGetDlgItem(hDlg,STC_PDS);
           hBMP4 = myLoadBitmapA(hInst,MAKEINTRESOURCE(PDS_BLUE));
@@ -1806,6 +1817,7 @@ static INT_PTR CALLBACK LogProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
 			//myEndDialog(hDlg,0);
          	 return (INT_PTR)TRUE;
         }
+
 		case WM_DESTROY:
 		{
 
@@ -1826,6 +1838,7 @@ static INT_PTR CALLBACK LogProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
 				bVisible=0 ;
 			 	myShowWindowAsync( hDlg , SW_HIDE ); 
 			}
+
             break;
 
 
@@ -2160,6 +2173,9 @@ static void GenericLogTunnelUpdater(const std::string &TimeStamp,const std::stri
 		globLogString = globLogString.substr( (uPosNewLine == std::string::npos) ? uPos : (uPosNewLine+2) );
 	}
 	mySendMessageA(hwndAlertLogText,WM_SETTEXT,0,(LPARAM)globLogString.c_str());
+	mySendMessageA(hwndAlertLogText, EM_SETSEL, 0, -1); 
+	mySendMessageA(hwndAlertLogText, EM_SETSEL, -1, -1);
+	mySendMessageA(hwndAlertLogText, EM_SCROLLCARET, 0, 0); 
 		
     
 }
@@ -2976,7 +2992,7 @@ static void POSTMoveData()
 
 
 	//msgs
-	myEnterCriticalSection(&LogMessageCS);
+
 
 	std::string ainput="RegNotifyChangeKeyValue Method->Change Detected->HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Session Manager->PendingFileRenameOperations\r\n\r\n";
 
@@ -2986,7 +3002,7 @@ static void POSTMoveData()
 //	myLeaveCriticalSection(&MoveCritical); 
 
 	std::string aTS100=logTSEntry();
-
+	myEnterCriticalSection(&LogMessageCS);
 	GenericLogTunnelUpdater(aTS100,ainput);
 	myLeaveCriticalSection(&LogMessageCS);
 
@@ -3036,7 +3052,7 @@ static void POSTRegData(unsigned type)
 
 
 	//msgs
-	myEnterCriticalSection(&LogMessageCS);
+
 	std::string ainput="";
 	if(type==1)
 	{
@@ -3053,7 +3069,7 @@ static void POSTRegData(unsigned type)
 
 
 	std::string aTS100=logTSEntry();
-
+	myEnterCriticalSection(&LogMessageCS);
 	GenericLogTunnelUpdater(aTS100,ainput);
 	myLeaveCriticalSection(&LogMessageCS);
 
@@ -3159,7 +3175,7 @@ static void POSTExeData()
 	
 	
 		//msgs
-		myEnterCriticalSection(&LogMessageCS);
+
 	
 		std::string ainput="New EXE launched detected via NtCreateUserProcess hook->\r\n\r\n";
 		ainput+=ParsedExe;
@@ -3171,7 +3187,7 @@ static void POSTExeData()
 	
 		std::string aTS100=logTSEntry();
 
-
+		myEnterCriticalSection(&LogMessageCS);
 		GenericLogTunnelUpdater(aTS100,ainput);
 		
 		myLeaveCriticalSection(&LogMessageCS);
@@ -3410,7 +3426,13 @@ static void RegistryMonitorFunctionHKLM()
 			//MessageBox(0,AllHKLM.c_str(),"hklm",0);
 			POSTRegData(2);
 
+			if(FirstRegHKLM==true)
+			{
+				FirstRegHKLM=false;
+				goto skipAlert1;
+			}
 			balloon(NULL);
+			skipAlert1:;
 		}
 		PreviousRegistryHashHKLM=digest;
 	
@@ -3489,7 +3511,13 @@ static void RegistryMonitorFunctionHKCU()
 		if(PreviousRegistryHash!=digest)
 		{
 			POSTRegData(1);
+			if(FirstRegHCKU==true)
+			{
+				FirstRegHCKU=false;
+				goto skipAlert;
+			}
 			balloon(NULL);
+			skipAlert:;
 		}
 		PreviousRegistryHash=digest;
 
