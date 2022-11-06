@@ -820,7 +820,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	#undef InitCriticalSection
 
 
-
+	WM_TASKBARCREATED = myRegisterWindowMessageA( "TaskbarCreated" );
 
 
 
