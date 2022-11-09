@@ -89,12 +89,12 @@ NTSTATUS (NTAPI Hooked_NtCreateUserProcess)(
 	//if theres already a flag to suspend then we dont need to do anything
 	//but that means we should NOT resume it either because the caller will do it later	
 	if (ThreadFlags & THREAD_CREATE_FLAGS_CREATE_SUSPENDED) {
-		OutputDebugStringA("Process is being created suspended.");
+		//OutputDebugStringA("Process is being created suspended.");
 		mytid = 1;
 	} else {
 		//make the thread start paused;
 		ThreadFlags |= THREAD_CREATE_FLAGS_CREATE_SUSPENDED;
-		OutputDebugStringA("Process is being created normally.");
+		//OutputDebugStringA("Process is being created normally.");
 	}	
 	
 		NTSTATUS ReturnValue = myReal_NtCreateUserProcess(ProcessHandle,
@@ -111,9 +111,9 @@ NTSTATUS (NTAPI Hooked_NtCreateUserProcess)(
 		);
 		
 		if (ReturnValue != STATUS_SUCCESS) { 
-			char msg[64];
-			sprintf(msg,"CreateUserProcess Failed error: %X",ReturnValue);
-			OutputDebugStringA(msg);
+			//char msg[64];
+			//sprintf(msg,"CreateUserProcess Failed error: %X",ReturnValue);
+			//OutputDebugStringA(msg);
 			return ReturnValue; 
 		}
 
@@ -155,13 +155,13 @@ NTSTATUS (NTAPI Hooked_NtCreateUserProcess)(
 		ipn = ProcessParameters->ImagePathName.Buffer;
 		if(ipn.empty() )
 		{
-				OutputDebugStringA("Empty Image path.");				
+				//OutputDebugStringA("Empty Image path.");				
 				goto failure;
 		}
 		ipn_s=ws2s(ipn);
 		if(ipn_s.empty() )
 		{
-				OutputDebugStringA("wide string conversion failed.");
+				//OutputDebugStringA("wide string conversion failed.");
 				goto failure;
 		}
 		
@@ -169,13 +169,13 @@ NTSTATUS (NTAPI Hooked_NtCreateUserProcess)(
 		cmd= ProcessParameters->CommandLine.Buffer;
 		if(cmd.empty() )
 		{
-				OutputDebugStringA("Empty command line.");				
+				//OutputDebugStringA("Empty command line.");				
 				goto failure;
 		}
 		cmd_s=ws2s(cmd);
 		if(cmd_s.empty() )
 		{
-				OutputDebugStringA("wide string conversion failed.");
+				//OutputDebugStringA("wide string conversion failed.");
 				goto failure;
 		}
 
@@ -209,7 +209,7 @@ NTSTATUS (NTAPI Hooked_NtCreateUserProcess)(
 		if (!CryptProtectMemory(SensitivePacket.data(), cbSensitiveText,
 			CRYPTPROTECTMEMORY_CROSS_PROCESS))
 		{
-			OutputDebugStringA("CPM" );
+			//OutputDebugStringA("CPM" );
 			SecureZeroMemory(SensitivePacket.data(), cbSensitiveText);
 			goto failure;
 		}		
@@ -217,7 +217,7 @@ NTSTATUS (NTAPI Hooked_NtCreateUserProcess)(
 		//this will never be empty just like the other one because of the same \1 hehe
 		if(SensitivePacket.empty() )
 		{
-			OutputDebugStringA("SS Empty" );			
+			//OutputDebugStringA("SS Empty" );			
 			SecureZeroMemory(SensitivePacket.data(), cbSensitiveText);						
 			goto failure;			
 			
@@ -229,13 +229,13 @@ NTSTATUS (NTAPI Hooked_NtCreateUserProcess)(
 		hwnd=FindWindowA("TideSecOps","TideSecOps");
 		if(hwnd==NULL)
 		{
-			OutputDebugStringA("Failed to find window." );
+			//OutputDebugStringA("Failed to find window." );
 			goto failure;
 		}
 		SetLastError(0);
-		OutputDebugStringA("Sending parameters");
+		//OutputDebugStringA("Sending parameters");
 		hr=SendMessageA(hwnd, WM_COPYDATA, (WPARAM)hwnd, (LPARAM)(LPVOID)&cds);		
-		OutputDebugStringA("Parameters sent!");
+		//OutputDebugStringA("Parameters sent!");
 		
 		/*err = GetLastError(); //need to be called RIGHT after the function
 		OutputDebugStringA("After send" );
@@ -247,7 +247,7 @@ NTSTATUS (NTAPI Hooked_NtCreateUserProcess)(
 		return ReturnValue;
 				
 		failure:
-		OutputDebugStringA("FAILED!");
+		//OutputDebugStringA("FAILED!");
 
 	return ReturnValue;
 
@@ -308,19 +308,19 @@ extern "C" __declspec(dllexport) WINAPI void SafeUnhook(void *Dummylol)
 DWORD __stdcall ProcAttachThread(LPVOID l)
 {
 	
-	char Msg[64];
-	sprintf(Msg,"inside thread: PID = %i",GetCurrentProcessId());
-	OutputDebugStringA(Msg);
+	//char Msg[64];
+	//sprintf(Msg,"inside thread: PID = %i",GetCurrentProcessId());
+	//OutputDebugStringA(Msg);
 	
 	if(m.success==false)
 	{
-		OutputDebugStringA("Failed to load DLLs (injected DLL)");		
+		//OutputDebugStringA("Failed to load DLLs (injected DLL)");		
 		return 0;
 	}
 	myReal_NtCreateUserProcess=(decltype(Real_NtCreateUserProcess)*)((void*)GetProcAddress(m.ntdll,"NtCreateUserProcess"));
 	if(!myReal_NtCreateUserProcess)
 	{
-		OutputDebugStringA("Failed to locate NtCreateUserProcess");
+		//OutputDebugStringA("Failed to locate NtCreateUserProcess");
 		return 0;
 	}
 	
@@ -338,13 +338,13 @@ DWORD __stdcall ProcAttachThread(LPVOID l)
 	{			
 		Free_Real_NtCreateUserProcess=true;
 	} else {
-		char Msg[64];
-		sprintf(Msg,"Failed  to hook (%i)",GetCurrentProcessId());
-		OutputDebugStringA(Msg);		
+		//char Msg[64];
+		//sprintf(Msg,"Failed  to hook (%i)",GetCurrentProcessId());
+		//OutputDebugStringA(Msg);		
 		return 0;
 	}	
 	
-	OutputDebugStringA("Hooked sucessfully!");
+	//OutputDebugStringA("Hooked sucessfully!");
 		
 	return 0;
 }
@@ -358,10 +358,10 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL,DWORD fdwReason,LPVOID lpvReserved)
 		case DLL_PROCESS_ATTACH:
 		{			
 			
-			OutputDebugStringA("DLL_PROCESS_ATTACH!");
-			char Msg[64];
-			sprintf(Msg,"before hook: PID = %i",GetCurrentProcessId());
-			OutputDebugStringA(Msg);
+			//OutputDebugStringA("DLL_PROCESS_ATTACH!");
+			//char Msg[64];
+			//sprintf(Msg,"before hook: PID = %i",GetCurrentProcessId());
+			//OutputDebugStringA(Msg);
 			
 			/*
 			DWORD shadeLog;
@@ -376,7 +376,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL,DWORD fdwReason,LPVOID lpvReserved)
 			
 			ProcAttachThread((LPVOID)hinstDLL);			
 			
-			OutputDebugStringA("After thread");
+			//OutputDebugStringA("After thread");
 			
 			//puts("test inside dll");
 

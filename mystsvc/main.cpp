@@ -30,6 +30,8 @@
 #include "C:/pcre2-10.40/src/pcre2.h"
 #include "t:/deeptide/mystsvc/hashes.h"
 
+static const char EXPLORER[]="explorer.exe";
+static const char ARCTIC[]="arcticmyst.exe";
 
 static bool AlreadyLoadedMainExe=false;
 
@@ -81,7 +83,7 @@ static char* GetProcAddressEx( HANDLE hProcess , HMODULE hModule ,const char* pz
 static void SecEngProcEnumerator_All(std::vector<DWORD> &ProcID32,std::vector<DWORD> &ProcID64);
 static void EjectDLL(DWORD nProcessId, const char* wsDLLPath);
 
-static DWORD SecEngProcEnumerator();
+static DWORD SecEngProcEnumerator(const char *filter);
 
 
 static std::string PCRE2_Extract_One_Submatch(const std::string pattern,const std::string &subject,const bool multi);
@@ -314,16 +316,22 @@ DWORD WINAPI ServiceWorkerThread (LPVOID lpParam)
 
 				std::string PAHashOut="";
 				std::string MainHashOut="";
-				if(AlreadyLoadedMainExe==true)
+				if( (AlreadyLoadedMainExe==true) && (SecEngProcEnumerator(EXPLORER)==0) && (SecEngProcEnumerator(ARCTIC)==0)  )
 				{
-					goto failed; //this prevents running it over and over again if user chose to quit main software
+					AlreadyLoadedMainExe=false; //the user must have quit or logged out.... OK to rerun
+					goto failed; 
 				}
 
-				//make sure EXPLORER is running, not at logon screen or else no GUI would be created
-				if(SecEngProcEnumerator()==0)
+				if( (SecEngProcEnumerator(EXPLORER)==0) && (SecEngProcEnumerator(ARCTIC)==0) )
 				{
 					goto failed;
 				}
+
+				if(AlreadyLoadedMainExe==true)
+				{
+					goto failed;
+				}
+
 
 				if( ReadAndHash(PA_PATH,PAHashOut) == false)
 				{
@@ -366,7 +374,7 @@ DWORD WINAPI ServiceWorkerThread (LPVOID lpParam)
 
 
 		failed:
-		Sleep(60000);
+		Sleep(10000);
     }
  
     return ERROR_SUCCESS;
@@ -467,7 +475,7 @@ DWORD WINAPI UpdateThread (LPVOID lpParam)
 			}
 
 			//only upgrade if explorer is running
-			if(SecEngProcEnumerator()==0)
+			if(SecEngProcEnumerator(EXPLORER)==0)
 			{
 					goto Failed2;
 			}
@@ -1286,7 +1294,8 @@ static void EjectProcesses()
 	return;
 }
 
-static DWORD SecEngProcEnumerator()
+
+static DWORD SecEngProcEnumerator(const char *filter)
 {
 	DWORD retval=0;
 	PROCESSENTRY32 ProcStruct;
@@ -1308,7 +1317,7 @@ static DWORD SecEngProcEnumerator()
 	do
 	{
 		std::string pexe = ProcStruct.szExeFile;
-		if (comparei("explorer.exe", pexe) == true)
+		if (comparei(filter, pexe) == true)
 		{
 			retval=ProcStruct.th32ProcessID;
 			break;
@@ -1321,6 +1330,7 @@ static DWORD SecEngProcEnumerator()
 	}
 	return retval;
 }
+
 
 static bool comparei(std::string input1,std::string input2)
 {
