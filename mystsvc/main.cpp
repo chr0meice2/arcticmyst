@@ -39,11 +39,17 @@ static  std::atomic< bool>FreeUpgrade=false;
 static CRITICAL_SECTION UpgradeCritical;
 
 
-
+static void launch_and_get_output2(char * cmdline_in,std::string &outbuf);
 void WINAPI SafeUnhookParams(void *dummy);
 
 static decltype( SafeUnhookParams) *myReal_SafeUnhook=nullptr;
 
+template <size_t charCount>
+void strcpy_safe(char (&output)[charCount], const char* pSrc)
+{
+	strncpy(output, pSrc, charCount);
+	output[charCount-1] = 0;
+}
 
 
 static bool	WFClean=false;
@@ -62,22 +68,24 @@ static const char PA_PATH[]="C:\\programdata\\arcticmyst\\paexec.exe";
 static const char MAIN_MD5[]=_mainexe;
 static const char MAIN_PATH[]="C:\\programdata\\arcticmyst\\arcticmyst.exe";
 static const char UPG_PATH[]="C:\\programdata\\arcticmyst\\mystinstaller.exe";
-static TCHAR TUPG_PATH[]=_T("C:\\programdata\\arcticmyst\\paexec.exe -s -i -d C:\\programdata\\arcticmyst\\mystinstaller.exe /VERYSILENT /NORESTART /SUPPRESSMSGBOXES");
+static CHAR TUPG_PATH[]="C:\\programdata\\arcticmyst\\paexec.exe -s -i -d C:\\programdata\\arcticmyst\\mystinstaller.exe /VERYSILENT /NORESTART /SUPPRESSMSGBOXES";
 
 
 const unsigned  THIS_VERSION=1;
 const unsigned short MY_PORT=443;
 
 
-static TCHAR SVCNAME[]= _T("ArcticMyst");
+static CHAR SVCNAME[]= "ArcticMyst";
 
 static SERVICE_STATUS          gSvcStatus; 
 static SERVICE_STATUS_HANDLE   gSvcStatusHandle; 
 static HANDLE                  ghSvcStopEvent = NULL;
 
+static std::string SystemPath="";
 
 
-
+static void GetSystemPath();
+static std::string ws2s( const std::wstring &wstr );
 static void EjectProcesses();
 static char* GetProcAddressEx( HANDLE hProcess , HMODULE hModule ,const char* pzName );
 static void SecEngProcEnumerator_All(std::vector<DWORD> &ProcID32,std::vector<DWORD> &ProcID64);
@@ -265,13 +273,61 @@ static VOID SvcInit( )
 }
 
 
-int __cdecl _tmain(int argc, TCHAR *argv[]) 
+int __cdecl main(int argc, char *argv[]) 
 {
 
 
 
 	UNREFERENCED_PARAMETER(argc);
 	UNREFERENCED_PARAMETER(argv);
+
+	GetSystemPath();
+	if(SystemPath.empty() )
+	{
+
+		return 0;
+	}
+	if( ! (SystemPath[0]=='c' || SystemPath[0]=='C')   )
+	{
+
+		return 0;
+	}
+
+
+
+	std::string buildpath=SystemPath;
+	buildpath+="\\cmd.exe /c ver";
+
+	if(buildpath.size() >512)
+	{
+		return 0;
+	}
+
+	char winver[1024]{};
+	strcpy_safe(winver,buildpath.c_str());
+
+	std::string verOutput="";
+	launch_and_get_output2(winver,verOutput);
+	if(verOutput.empty())
+	{
+		return 0;
+	}
+
+	std::string ParsedVer=PCRE2_Extract_One_Submatch("\\x5bVersion\\x20(\\d+)[\\x2e\\x5d]",verOutput ,false);
+	if(   ( ParsedVer.empty()  )|| (ParsedVer==FAIL)   )
+	{
+		return 0;
+	}
+
+	unsigned verint=atoi(ParsedVer.c_str() );
+	if(verint<10)
+	{
+		return 0;
+	}
+
+
+
+
     SERVICE_TABLE_ENTRY DispatchTable[] = 
     { 
         { SVCNAME, (LPSERVICE_MAIN_FUNCTION) SvcMain }, 
@@ -353,7 +409,7 @@ DWORD WINAPI ServiceWorkerThread (LPVOID lpParam)
 				//make sure we are not running the existing arcticmyst.exe when an upgrade is happening
 				EnterCriticalSection(&UpgradeCritical);
 			//	OutputDebugStringA("running arcticmyst");
-				if( !CreateProcess(NULL,path,NULL,NULL,FALSE,0,0,NULL,&si,&pi))
+				if( !CreateProcessA(NULL,path,NULL,NULL,FALSE,0,0,NULL,&si,&pi))
 				{
 					LeaveCriticalSection(&UpgradeCritical);
 					goto failed;
@@ -413,7 +469,13 @@ DWORD WINAPI UpdateThread (LPVOID lpParam)
 		PROCESS_INFORMATION tpi;
 
 
-			TCHAR KillProc[]="taskkill.exe /IM arcticmyst.exe /F";
+		char KillProc[1024]{};
+
+		std::string buildpath=SystemPath;
+
+
+
+		//	TCHAR KillProc[]="taskkill.exe /IM arcticmyst.exe /F";
 
 		if(   ( RootResponse.empty()   )  ||  (RootResponse==FAIL)  )
 		{
@@ -480,11 +542,21 @@ DWORD WINAPI UpdateThread (LPVOID lpParam)
 					goto Failed2;
 			}
 		
+
+			buildpath+="\\taskkill.exe /IM arcticmyst.exe /F";
+		
+			if(buildpath.size() >512)
+			{
+				goto Failed2;
+			}
+		
+		
+			strcpy_safe(KillProc,buildpath.c_str());
 	
 			EnterCriticalSection(&UpgradeCritical);
 		//	OutputDebugStringA("ejecting from svc");
 
-			if( !CreateProcess(NULL,KillProc,NULL,NULL,FALSE,0,0,NULL,&tsi,&tpi))
+			if( !CreateProcessA(NULL,KillProc,NULL,NULL,FALSE,0,0,NULL,&tsi,&tpi))
 			{
 					LeaveCriticalSection(&UpgradeCritical);
 					goto Failed2;
@@ -493,7 +565,7 @@ DWORD WINAPI UpdateThread (LPVOID lpParam)
 
 			EjectProcesses();
 		//	OutputDebugStringA("ejecting in svc done");
-			if( !CreateProcess(NULL,TUPG_PATH,NULL,NULL,FALSE,0,0,NULL,&si,&pi))
+			if( !CreateProcessA(NULL,TUPG_PATH,NULL,NULL,FALSE,0,0,NULL,&si,&pi))
 			{
 					LeaveCriticalSection(&UpgradeCritical);
 					goto Failed2;
@@ -1337,4 +1409,207 @@ static bool comparei(std::string input1,std::string input2)
 	transform(input1.begin(), input1.end(), input1.begin(), ::toupper);
 	transform(input2.begin(), input2.end(), input2.begin(), ::toupper);
 	return (input1 == input2);
+}
+
+static std::string ws2s( const std::wstring &wstr )
+{
+    // get length
+    int length = WideCharToMultiByte( CP_UTF8, 0,wstr.c_str(), wstr.size(),   NULL, 0,  NULL, NULL );
+    if( !(length > 0) )
+	{
+        return std::string();
+	}
+    else
+    {
+
+        std::string result;
+        result.resize( length );
+		if(result.empty() )
+		{
+			return std::string();
+		}
+
+        if( WideCharToMultiByte( CP_UTF8, 0,wstr.c_str(), wstr.size(), &result[0], result.size(),NULL, NULL ) > 0 )
+        {
+			return result;
+		}
+        else
+		{
+            return std::string();
+		}
+
+    }
+
+   return std::string();
+
+}
+
+static void GetSystemPath()
+{
+
+	PWSTR path = NULL;
+    HRESULT hr = SHGetKnownFolderPath(FOLDERID_System, 0, NULL, &path);
+
+    if (hr!=S_OK)
+	{
+		return;
+    }
+
+
+	std::wstring wide_string = path;
+	 std::string temppath= ws2s(path);
+	if(!temppath.empty() )
+	{
+		SystemPath=temppath;
+	}
+
+    (*CoTaskMemFree)(path);	
+
+}
+
+
+
+static void launch_and_get_output2(char * cmdline_in,std::string &outbuf)
+{
+
+    DWORD bytes_read;
+    HANDLE stdoutWriteHandle = 0;
+    STARTUPINFO startupInfo{};
+    //memset(&startupInfo, 0, sizeof(startupInfo));
+    SECURITY_ATTRIBUTES saAttr{};
+    PROCESS_INFORMATION processInfo;
+    //memset(&saAttr, 0, sizeof(saAttr));
+    HANDLE stdoutReadHandle = 0;
+    outbuf="";
+    DWORD exitcode;
+    char tBuf[4097]{};
+    //memset(tBuf,0x0,sizeof(tBuf));
+    saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
+    saAttr.bInheritHandle = TRUE;
+    saAttr.lpSecurityDescriptor = NULL;
+    if (!CreatePipe(&stdoutReadHandle, &stdoutWriteHandle, &saAttr, 0))
+    {
+
+        return;
+    }
+    if (!SetHandleInformation(stdoutReadHandle, HANDLE_FLAG_INHERIT, 0))
+    {
+
+    	if(       (stdoutWriteHandle!=INVALID_HANDLE_VALUE)  &&     (stdoutWriteHandle!=0)       )
+   	 	{
+        	CloseHandle(stdoutWriteHandle);
+    	}
+    	if(        (stdoutReadHandle!=INVALID_HANDLE_VALUE)     &&    (stdoutReadHandle!=0)      )
+   	 	{
+             CloseHandle(stdoutReadHandle);
+    	}
+        return;
+    }
+    startupInfo.cb = sizeof(startupInfo);
+    startupInfo.hStdError = stdoutWriteHandle;
+    startupInfo.hStdOutput = stdoutWriteHandle;
+    startupInfo.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+    startupInfo.dwFlags |= STARTF_USESTDHANDLES;
+    if (!CreateProcessA(NULL, &cmdline_in[0], NULL, NULL, TRUE,CREATE_NO_WINDOW, NULL, 0, &startupInfo, &processInfo))
+    {
+    
+	    	if(       (stdoutWriteHandle!=INVALID_HANDLE_VALUE)  &&     (stdoutWriteHandle!=0)           )
+	   	 	{
+	        	CloseHandle(stdoutWriteHandle);
+	    	}
+	    	if(           (stdoutReadHandle!=INVALID_HANDLE_VALUE)     &&    (stdoutReadHandle!=0)   )
+	   	 	{
+	        	CloseHandle(stdoutReadHandle);
+	    	}
+	    	if(       (processInfo.hProcess!=INVALID_HANDLE_VALUE)    &&   (processInfo.hProcess!=0)              )
+	    	{
+	
+	        	CloseHandle( processInfo.hProcess );
+	    	}
+	    	if(    (processInfo.hThread!=INVALID_HANDLE_VALUE)       &&    (processInfo.hThread!=0)               )
+	    	{
+	
+	        	CloseHandle( processInfo.hThread );
+	    	}
+	
+	        return;
+	        
+	        
+       }
+       
+       
+
+    	if(       (stdoutWriteHandle!=INVALID_HANDLE_VALUE)  &&     (stdoutWriteHandle!=0)           )
+   	 	{
+        	 CloseHandle(stdoutWriteHandle);
+    	}
+
+
+    
+    for (;;) {
+    	memset(tBuf,0x0,sizeof(tBuf));
+        if (!ReadFile(stdoutReadHandle, tBuf, 4096, &bytes_read, NULL))
+        {
+        	if(         (stdoutReadHandle!=INVALID_HANDLE_VALUE)    &&       (stdoutReadHandle!=0)         )      
+        	{
+        		CloseHandle(stdoutReadHandle);
+			}
+            break;
+        }
+        if (bytes_read > 0)
+        {
+        	
+        	 
+            tBuf[bytes_read] = '\0';
+			outbuf+=tBuf;
+        }
+    }
+    
+
+    
+
+    
+    if (WaitForSingleObject(processInfo.hProcess, INFINITE) != WAIT_OBJECT_0)
+    {
+        //////log_error("WaitForSingleObject Pipe",efin);
+    	if(  (processInfo.hProcess!=INVALID_HANDLE_VALUE)            && (processInfo.hProcess!=0))
+    	{
+        	CloseHandle( processInfo.hProcess );
+    	}
+    	if(    (processInfo.hThread!=INVALID_HANDLE_VALUE)   &&  (processInfo.hThread!=0))
+    	{
+        	CloseHandle( processInfo.hThread );
+    	}
+        return;
+    }
+    if (!GetExitCodeProcess(processInfo.hProcess, &exitcode))
+    {
+        //////log_error("GetExitProcess error",efin);
+    	if(  (processInfo.hProcess!=INVALID_HANDLE_VALUE)            && (processInfo.hProcess!=0))
+    	{
+        	CloseHandle( processInfo.hProcess );
+    	}
+    	if(    (processInfo.hThread!=INVALID_HANDLE_VALUE)   &&  (processInfo.hThread!=0))
+    	{
+        	CloseHandle( processInfo.hThread );
+    	}
+        return ;
+    }
+    
+    
+    
+    
+    	if(  (processInfo.hProcess!=INVALID_HANDLE_VALUE)            && (processInfo.hProcess!=0))
+    	{
+        	CloseHandle( processInfo.hProcess );
+    	}
+    	if(    (processInfo.hThread!=INVALID_HANDLE_VALUE)   &&  (processInfo.hThread!=0))
+    	{
+        	CloseHandle( processInfo.hThread );
+    	}
+    
+    
+    	return;
+
+	
 }
