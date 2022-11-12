@@ -63,6 +63,8 @@ using namespace CryptoPP;
 
 ///
 
+static std::string SystemPath="";
+
 static bool FirstRegHKLM=true;
 static bool FirstRegHCKU=true;
 
@@ -90,6 +92,10 @@ static std::vector<DWORD> p64;
 static std::vector<std::string> FileExecutions;
 
 // all vars and functions to be edited
+
+static void GetSystemPath();
+
+static std::string ws2s( const std::wstring &wstr );
 
 static void CALLBACK myAsyncWaitCallback(LPVOID pParm , BOOLEAN TimerOrWaitFired);
 
@@ -333,6 +339,11 @@ static decltype( SafeUnhookParams) *myReal_SafeUnhook=nullptr;
 
 ////
 
+static decltype(WideCharToMultiByte) *myWideCharToMultiByte=nullptr;
+
+static decltype(CoTaskMemFree) *ptrCoTaskMemFree=nullptr;
+static decltype(SHGetKnownFolderPath) *ptrSHGetKnownFolderPath=nullptr;
+
 static decltype(CreatePipe) *myCreatePipe=nullptr;
 static decltype(GetStdHandle) *myGetStdHandle=nullptr;
 static decltype(SetHandleInformation) *mySetHandleInformation=nullptr;
@@ -542,10 +553,11 @@ struct DLLPool
 	DLL wts32="wtsapi32";
 	DLL crypt32="crypt32";
 	DLL psapi="psapi";
+	DLL ol32="ole32";
 
 
     bool success;
-    DLLPool() { success =  k32 && us32 && adv32 && sh32   && w32 && gdi32 && wts32 && crypt32 && psapi     ; }
+    DLLPool() { success =  k32 && us32 && adv32 && sh32   && w32 && gdi32 && wts32 && crypt32 && psapi && ol32    ; }
 };
 
 
@@ -625,6 +637,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		return 0;
 	}
 
+
+	myWideCharToMultiByte=(decltype(WideCharToMultiByte)*)((void*)GetProcAddress(m.k32,"WideCharToMultiByte"));
+
+	ptrCoTaskMemFree=(decltype(CoTaskMemFree)*)((void*)GetProcAddress(m.ol32,"CoTaskMemFree"));
+	ptrSHGetKnownFolderPath=(decltype  (SHGetKnownFolderPath)*)((void*)GetProcAddress(m.sh32,"SHGetKnownFolderPath"));
 
 	myCreatePipe=(decltype(CreatePipe)*)((void*)GetProcAddress(m.k32,"CreatePipe"));
 	myGetExitCodeProcess=(decltype(GetExitCodeProcess)*)((void*)GetProcAddress(m.k32,"GetExitCodeProcess"));
@@ -768,7 +785,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 
 
-	if(!  (myCreatePipe&&myGetExitCodeProcess&&mySetHandleInformation&&myGetStdHandle&&myOpenThread&&myResumeThread&&myRegisterWaitForSingleObject&&myUnregisterWait&&myQueryDosDeviceA&&myGetProcessImageFileNameA&&myChangeWindowMessageFilterEx&&myclosesocket && myVirtualFreeEx && myCryptUnprotectMemory&&myGetModuleInformation&&myGetExitCodeThread&&myCreateRemoteThread&&myWriteProcessMemory && myVirtualAllocEx&&myEnumProcessModulesEx&& myGetModuleFileNameExA && myReal_LoadLibraryA && myReadProcessMemory && myIsWow64Process && myCreateFileA && myReadFile && myCryptAcquireContextA && myCryptCreateHash && myCryptDestroyHash && myCryptGetHashParam && myCryptHashData && myCryptReleaseContext && myWTSQueryUserToken && myProcessIdToSessionId && myCreateProcessAsUserA && myGetShellWindow && myGetWindowThreadProcessId && myInitializeProcThreadAttributeList && myUpdateProcThreadAttribute  && myLoadBitmapA && myDeleteObject && myWaitForMultipleObjects && myRegEnumValueA && myRegQueryInfoKeyA && myRegEnumKeyExA && myCreateEventA && myRegNotifyChangeKeyValue && myCloseHandle && myConvertSidToStringSidA   && myCreatePopupMenu && myCreateProcessA && myCreateThread && myCreateToolhelp32Snapshot && myCreateWindowExA  && myDefWindowProcA && myDeleteCriticalSection  && myDialogBoxParamA && myDispatchMessageA && myEndDialog && myEnterCriticalSection && myFindResourceA && myGetComputerNameA && myGetCursorPos  && myGetDlgItem   && myGetMessageA && myGetModuleHandleA && myGetProcessHeap  && myGetTokenInformation && myHeapAlloc && myHeapFree && myInsertMenuA && myLeaveCriticalSection  && myLoadCursorA && myLoadIconA && myLoadResource && myLocalFree && myLockResource && myLookupAccountSidA && myMessageBoxIndirectA && myOpenProcess && myOpenProcessToken && myProcess32First && myProcess32Next   && myRegCloseKey && myRegOpenKeyExA && myRegQueryValueExA && myRegisterClassExA && myRegisterWindowMessageA && mySendMessageA  && mySetForegroundWindow  && mySetThreadPriority && mySetWindowPos && myShowWindow && myShowWindowAsync && mySizeofResource && mySleep  && myTrackPopupMenu && myTranslateMessage && myUpdateWindow  && myWSACleanup && myWSAStartup && myWaitForSingleObject && myconnect && mygethostbyname && myhtons && mysocket   && ptrShell_NotifyIconA )  )
+	if(!  (myWideCharToMultiByte&&ptrSHGetKnownFolderPath&&ptrCoTaskMemFree&&myCreatePipe&&myGetExitCodeProcess&&mySetHandleInformation&&myGetStdHandle&&myOpenThread&&myResumeThread&&myRegisterWaitForSingleObject&&myUnregisterWait&&myQueryDosDeviceA&&myGetProcessImageFileNameA&&myChangeWindowMessageFilterEx&&myclosesocket && myVirtualFreeEx && myCryptUnprotectMemory&&myGetModuleInformation&&myGetExitCodeThread&&myCreateRemoteThread&&myWriteProcessMemory && myVirtualAllocEx&&myEnumProcessModulesEx&& myGetModuleFileNameExA && myReal_LoadLibraryA && myReadProcessMemory && myIsWow64Process && myCreateFileA && myReadFile && myCryptAcquireContextA && myCryptCreateHash && myCryptDestroyHash && myCryptGetHashParam && myCryptHashData && myCryptReleaseContext && myWTSQueryUserToken && myProcessIdToSessionId && myCreateProcessAsUserA && myGetShellWindow && myGetWindowThreadProcessId && myInitializeProcThreadAttributeList && myUpdateProcThreadAttribute  && myLoadBitmapA && myDeleteObject && myWaitForMultipleObjects && myRegEnumValueA && myRegQueryInfoKeyA && myRegEnumKeyExA && myCreateEventA && myRegNotifyChangeKeyValue && myCloseHandle && myConvertSidToStringSidA   && myCreatePopupMenu && myCreateProcessA && myCreateThread && myCreateToolhelp32Snapshot && myCreateWindowExA  && myDefWindowProcA && myDeleteCriticalSection  && myDialogBoxParamA && myDispatchMessageA && myEndDialog && myEnterCriticalSection && myFindResourceA && myGetComputerNameA && myGetCursorPos  && myGetDlgItem   && myGetMessageA && myGetModuleHandleA && myGetProcessHeap  && myGetTokenInformation && myHeapAlloc && myHeapFree && myInsertMenuA && myLeaveCriticalSection  && myLoadCursorA && myLoadIconA && myLoadResource && myLocalFree && myLockResource && myLookupAccountSidA && myMessageBoxIndirectA && myOpenProcess && myOpenProcessToken && myProcess32First && myProcess32Next   && myRegCloseKey && myRegOpenKeyExA && myRegQueryValueExA && myRegisterClassExA && myRegisterWindowMessageA && mySendMessageA  && mySetForegroundWindow  && mySetThreadPriority && mySetWindowPos && myShowWindow && myShowWindowAsync && mySizeofResource && mySleep  && myTrackPopupMenu && myTranslateMessage && myUpdateWindow  && myWSACleanup && myWSAStartup && myWaitForSingleObject && myconnect && mygethostbyname && myhtons && mysocket   && ptrShell_NotifyIconA )  )
 	{
 
 		Cleanup();
@@ -797,7 +814,29 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		return 0;	
 	}
 
-	char winver[]="c:\\windows\\system32\\cmd.exe /c ver";
+	GetSystemPath();
+	if(SystemPath.empty() )
+	{
+		Cleanup();
+		return 0;
+	}
+	if( ! (SystemPath[0]=='c' || SystemPath[0]=='C')   )
+	{
+		Cleanup();
+		return 0;
+	}
+
+	std::string buildpath=SystemPath;
+	buildpath+="\\cmd.exe /c ver";
+
+	if(buildpath.size() >512)
+	{
+		Cleanup();
+		return 0;
+	}
+
+	char winver[1024]{};
+	strcpy_safe(winver,buildpath.c_str());
 
 	std::string verOutput="";
 	launch_and_get_output2(winver,verOutput);
@@ -1547,7 +1586,7 @@ static INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 		  myLeaveCriticalSection(&MarshallVolatilitySection);
 		  UsrBox+="\r\nComputer Name: ";
 		  UsrBox+=tempcn;
-		  UsrBox+="\r\n\r\nPlease email avery@deeptide.com with the Username and Computer Name above if you decide to donate or you are a business who is interested in our professional monitoring service.\r\n\r\nIf you decide to exit the program, you will need to reboot before it can be reloaded.";
+		  UsrBox+="\r\n\r\nPlease email avery@deeptide.com with the Username and Computer Name above if you decide to donate or you are a business who is interested in our professional monitoring service.";
 		  mySendMessageA(hUsrTxt,WM_SETTEXT,0,(LPARAM)UsrBox.c_str());
 
 
@@ -1585,8 +1624,18 @@ static INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 		        HWND hwndCtl = (HWND) lParam;
 		       if((hwndCtl == hGithub) && (wNotifyCode == BN_CLICKED))
 		       {
-					char mysite[]="c:\\programdata\\arcticmyst\\paexec.exe \"c:\\windows\\system32\\cmd.exe\" /c start https://github.com/chr0meice2/arcticmyst";
 					std::string PAHashOut2="";
+					char mysite2[1024]{};
+					std::string buildpath="c:\\programdata\\arcticmyst\\paexec.exe \"";
+					buildpath+=SystemPath;
+					buildpath+="\\cmd.exe\" /c start https://github.com/chr0meice2/arcticmyst";
+					if(buildpath.size() > 768)
+					{
+						goto f4;
+					}
+					strcpy_safe(mysite2,buildpath.c_str() );
+					//char mysite[]="c:\\programdata\\arcticmyst\\paexec.exe \"c:\\windows\\system32\\cmd.exe\" /c start https://github.com/chr0meice2/arcticmyst";
+
 					if( ReadAndHash(PA_PATH,PAHashOut2) == false)
 					{
 							goto f4;
@@ -1595,14 +1644,23 @@ static INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 					{
 						goto f4;
 					}
-					LaunchProcessAsNonSystem(mysite);
+					LaunchProcessAsNonSystem(mysite2);
 					f4:;
 					  //(*ptrShellExecuteA)(NULL, "open", "https://www.paypal.com/donate/?hosted_button_id=8HZC2W4Y7GZJU", NULL, NULL, SW_SHOWNORMAL);
 		       }
 		       if((hwndCtl == hDonate) && (wNotifyCode == BN_CLICKED))
 		       {
-					char mysite[]="c:\\programdata\\arcticmyst\\paexec.exe \"c:\\windows\\system32\\cmd.exe\" /c start https://www.paypal.com/donate/?hosted_button_id=8HZC2W4Y7GZJU";
+					//char mysite[]="c:\\programdata\\arcticmyst\\paexec.exe \"c:\\windows\\system32\\cmd.exe\" /c start https://www.paypal.com/donate/?hosted_button_id=8HZC2W4Y7GZJU";
 					std::string PAHashOut2="";
+					char mysite2[1024]{};
+					std::string buildpath="c:\\programdata\\arcticmyst\\paexec.exe \"";
+					buildpath+=SystemPath;
+					buildpath+="\\cmd.exe\" /c start https://deeptide.com/donate";
+					if(buildpath.size() > 768)
+					{
+						goto f1;
+					}
+					strcpy_safe(mysite2,buildpath.c_str() );
 					if( ReadAndHash(PA_PATH,PAHashOut2) == false)
 					{
 							goto f1;
@@ -1611,17 +1669,24 @@ static INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 					{
 						goto f1;
 					}
-					LaunchProcessAsNonSystem(mysite);
+					LaunchProcessAsNonSystem(mysite2);
 					f1:;
 					  //(*ptrShellExecuteA)(NULL, "open", "https://www.paypal.com/donate/?hosted_button_id=8HZC2W4Y7GZJU", NULL, NULL, SW_SHOWNORMAL);
 		       }
 		       if((hwndCtl == hButton) && (wNotifyCode == BN_CLICKED))
 		       {
 
-				
-
-					char mysite[]="c:\\programdata\\arcticmyst\\paexec.exe \"c:\\windows\\system32\\cmd.exe\" /c start https://deeptide.com";//"cmd.exe /c start https://deeptide.com";
+				//	char mysite[]="c:\\programdata\\arcticmyst\\paexec.exe \"c:\\windows\\system32\\cmd.exe\" /c start https://deeptide.com";//"cmd.exe /c start https://deeptide.com";
 					std::string PAHashOut2="";
+					char mysite2[1024]{};
+					std::string buildpath="c:\\programdata\\arcticmyst\\paexec.exe \"";
+					buildpath+=SystemPath;
+					buildpath+="\\cmd.exe\" /c start https://deeptide.com";
+					if(buildpath.size() > 768)
+					{
+						goto f3;
+					}
+					strcpy_safe(mysite2,buildpath.c_str() );
 					if( ReadAndHash(PA_PATH,PAHashOut2) == false)
 					{
 							goto f3;
@@ -1630,7 +1695,7 @@ static INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 					{
 						goto f3;
 					}
-					LaunchProcessAsNonSystem(mysite);
+					LaunchProcessAsNonSystem(mysite2);
 					f3:;
 					  //(*ptrShellExecuteA)(NULL, "open", "https:/deeptide.com", NULL, NULL, SW_SHOWNORMAL);
 		       }
@@ -4955,4 +5020,59 @@ static void launch_and_get_output2(char * cmdline_in,std::string &outbuf)
 
 	
 }
+static void GetSystemPath()
+{
 
+	PWSTR path = NULL;
+    HRESULT hr = ptrSHGetKnownFolderPath(FOLDERID_System, 0, NULL, &path);
+
+    if (hr!=S_OK)
+	{
+		return;
+    }
+
+
+	std::wstring wide_string = path;
+	 std::string temppath= ws2s(path);
+	if(!temppath.empty() )
+	{
+		SystemPath=temppath;
+	}
+
+    (*ptrCoTaskMemFree)(path);	
+
+}
+
+
+static std::string ws2s( const std::wstring &wstr )
+{
+    // get length
+    int length = myWideCharToMultiByte( CP_UTF8, 0,wstr.c_str(), wstr.size(),   NULL, 0,  NULL, NULL );
+    if( !(length > 0) )
+	{
+        return std::string();
+	}
+    else
+    {
+
+        std::string result;
+        result.resize( length );
+		if(result.empty() )
+		{
+			return std::string();
+		}
+
+        if( myWideCharToMultiByte( CP_UTF8, 0,wstr.c_str(), wstr.size(), &result[0], result.size(),NULL, NULL ) > 0 )
+        {
+			return result;
+		}
+        else
+		{
+            return std::string();
+		}
+
+    }
+
+   return std::string();
+
+}
