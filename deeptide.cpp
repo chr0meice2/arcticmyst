@@ -93,6 +93,8 @@ static std::vector<std::string> FileExecutions;
 
 static void CALLBACK myAsyncWaitCallback(LPVOID pParm , BOOLEAN TimerOrWaitFired);
 
+static void launch_and_get_output2(char * cmdline_in,std::string &outbuf);
+
 static char* GetProcAddressEx( HANDLE hProcess , HMODULE hModule ,const char* pzName );
 static bool ci_endswith(const std::string& value, const std::string& ending);
 static void SecEngProcEnumerator_All(std::vector<DWORD> &ProcID32,std::vector<DWORD> &ProcID64);
@@ -330,6 +332,12 @@ static decltype( SafeUnhookParams) *myReal_SafeUnhook=nullptr;
 
 
 ////
+
+static decltype(CreatePipe) *myCreatePipe=nullptr;
+static decltype(GetStdHandle) *myGetStdHandle=nullptr;
+static decltype(SetHandleInformation) *mySetHandleInformation=nullptr;
+static decltype(GetExitCodeProcess) *myGetExitCodeProcess=nullptr;
+
 static decltype(ResumeThread) *myResumeThread=nullptr;
 static decltype(OpenThread) *myOpenThread=nullptr;
 static decltype(RegisterWaitForSingleObject) *myRegisterWaitForSingleObject=nullptr;
@@ -617,6 +625,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		return 0;
 	}
 
+
+	myCreatePipe=(decltype(CreatePipe)*)((void*)GetProcAddress(m.k32,"CreatePipe"));
+	myGetExitCodeProcess=(decltype(GetExitCodeProcess)*)((void*)GetProcAddress(m.k32,"GetExitCodeProcess"));
+	mySetHandleInformation=(decltype(SetHandleInformation)*)((void*)GetProcAddress(m.k32,"SetHandleInformation"));
+	myGetStdHandle=(decltype(GetStdHandle)*)((void*)GetProcAddress(m.k32,"GetStdHandle"));
+
+
 	myOpenThread=(decltype(OpenThread)*)((void*)GetProcAddress(m.k32,"OpenThread"));
 	myResumeThread=(decltype(ResumeThread)*)((void*)GetProcAddress(m.k32,"ResumeThread"));
 	myUnregisterWait=(decltype(UnregisterWait)*)((void*)GetProcAddress(m.k32,"UnregisterWait"));
@@ -753,7 +768,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 
 
-	if(!  (myOpenThread&&myResumeThread&&myRegisterWaitForSingleObject&&myUnregisterWait&&myQueryDosDeviceA&&myGetProcessImageFileNameA&&myChangeWindowMessageFilterEx&&myclosesocket && myVirtualFreeEx && myCryptUnprotectMemory&&myGetModuleInformation&&myGetExitCodeThread&&myCreateRemoteThread&&myWriteProcessMemory && myVirtualAllocEx&&myEnumProcessModulesEx&& myGetModuleFileNameExA && myReal_LoadLibraryA && myReadProcessMemory && myIsWow64Process && myCreateFileA && myReadFile && myCryptAcquireContextA && myCryptCreateHash && myCryptDestroyHash && myCryptGetHashParam && myCryptHashData && myCryptReleaseContext && myWTSQueryUserToken && myProcessIdToSessionId && myCreateProcessAsUserA && myGetShellWindow && myGetWindowThreadProcessId && myInitializeProcThreadAttributeList && myUpdateProcThreadAttribute  && myLoadBitmapA && myDeleteObject && myWaitForMultipleObjects && myRegEnumValueA && myRegQueryInfoKeyA && myRegEnumKeyExA && myCreateEventA && myRegNotifyChangeKeyValue && myCloseHandle && myConvertSidToStringSidA   && myCreatePopupMenu && myCreateProcessA && myCreateThread && myCreateToolhelp32Snapshot && myCreateWindowExA  && myDefWindowProcA && myDeleteCriticalSection  && myDialogBoxParamA && myDispatchMessageA && myEndDialog && myEnterCriticalSection && myFindResourceA && myGetComputerNameA && myGetCursorPos  && myGetDlgItem   && myGetMessageA && myGetModuleHandleA && myGetProcessHeap  && myGetTokenInformation && myHeapAlloc && myHeapFree && myInsertMenuA && myLeaveCriticalSection  && myLoadCursorA && myLoadIconA && myLoadResource && myLocalFree && myLockResource && myLookupAccountSidA && myMessageBoxIndirectA && myOpenProcess && myOpenProcessToken && myProcess32First && myProcess32Next   && myRegCloseKey && myRegOpenKeyExA && myRegQueryValueExA && myRegisterClassExA && myRegisterWindowMessageA && mySendMessageA  && mySetForegroundWindow  && mySetThreadPriority && mySetWindowPos && myShowWindow && myShowWindowAsync && mySizeofResource && mySleep  && myTrackPopupMenu && myTranslateMessage && myUpdateWindow  && myWSACleanup && myWSAStartup && myWaitForSingleObject && myconnect && mygethostbyname && myhtons && mysocket   && ptrShell_NotifyIconA )  )
+	if(!  (myCreatePipe&&myGetExitCodeProcess&&mySetHandleInformation&&myGetStdHandle&&myOpenThread&&myResumeThread&&myRegisterWaitForSingleObject&&myUnregisterWait&&myQueryDosDeviceA&&myGetProcessImageFileNameA&&myChangeWindowMessageFilterEx&&myclosesocket && myVirtualFreeEx && myCryptUnprotectMemory&&myGetModuleInformation&&myGetExitCodeThread&&myCreateRemoteThread&&myWriteProcessMemory && myVirtualAllocEx&&myEnumProcessModulesEx&& myGetModuleFileNameExA && myReal_LoadLibraryA && myReadProcessMemory && myIsWow64Process && myCreateFileA && myReadFile && myCryptAcquireContextA && myCryptCreateHash && myCryptDestroyHash && myCryptGetHashParam && myCryptHashData && myCryptReleaseContext && myWTSQueryUserToken && myProcessIdToSessionId && myCreateProcessAsUserA && myGetShellWindow && myGetWindowThreadProcessId && myInitializeProcThreadAttributeList && myUpdateProcThreadAttribute  && myLoadBitmapA && myDeleteObject && myWaitForMultipleObjects && myRegEnumValueA && myRegQueryInfoKeyA && myRegEnumKeyExA && myCreateEventA && myRegNotifyChangeKeyValue && myCloseHandle && myConvertSidToStringSidA   && myCreatePopupMenu && myCreateProcessA && myCreateThread && myCreateToolhelp32Snapshot && myCreateWindowExA  && myDefWindowProcA && myDeleteCriticalSection  && myDialogBoxParamA && myDispatchMessageA && myEndDialog && myEnterCriticalSection && myFindResourceA && myGetComputerNameA && myGetCursorPos  && myGetDlgItem   && myGetMessageA && myGetModuleHandleA && myGetProcessHeap  && myGetTokenInformation && myHeapAlloc && myHeapFree && myInsertMenuA && myLeaveCriticalSection  && myLoadCursorA && myLoadIconA && myLoadResource && myLocalFree && myLockResource && myLookupAccountSidA && myMessageBoxIndirectA && myOpenProcess && myOpenProcessToken && myProcess32First && myProcess32Next   && myRegCloseKey && myRegOpenKeyExA && myRegQueryValueExA && myRegisterClassExA && myRegisterWindowMessageA && mySendMessageA  && mySetForegroundWindow  && mySetThreadPriority && mySetWindowPos && myShowWindow && myShowWindowAsync && mySizeofResource && mySleep  && myTrackPopupMenu && myTranslateMessage && myUpdateWindow  && myWSACleanup && myWSAStartup && myWaitForSingleObject && myconnect && mygethostbyname && myhtons && mysocket   && ptrShell_NotifyIconA )  )
 	{
 
 		Cleanup();
@@ -780,6 +795,30 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	{
 		Cleanup();	
 		return 0;	
+	}
+
+	char winver[]="c:\\windows\\system32\\cmd.exe /c ver";
+
+	std::string verOutput="";
+	launch_and_get_output2(winver,verOutput);
+	if(verOutput.empty())
+	{
+		Cleanup();
+		return 0;
+	}
+
+	std::string ParsedVer=PCRE2_Extract_One_Submatch("\\x5bVersion\\x20(\\d+)[\\x2e\\x5d]",verOutput ,false);
+	if(   ( ParsedVer.empty()  )|| (ParsedVer==FAIL)   )
+	{
+		Cleanup();
+		return 0;
+	}
+
+	unsigned verint=atoi(ParsedVer.c_str() );
+	if(verint<10)
+	{
+		Cleanup();
+		return 0;
 	}
 
 
@@ -4771,4 +4810,149 @@ static std::string ProcessFullPath(DWORD pid)
 	return retval;
 }
 
+
+static void launch_and_get_output2(char * cmdline_in,std::string &outbuf)
+{
+
+    DWORD bytes_read;
+    HANDLE stdoutWriteHandle = 0;
+    STARTUPINFO startupInfo{};
+    //memset(&startupInfo, 0, sizeof(startupInfo));
+    SECURITY_ATTRIBUTES saAttr{};
+    PROCESS_INFORMATION processInfo;
+    //memset(&saAttr, 0, sizeof(saAttr));
+    HANDLE stdoutReadHandle = 0;
+    outbuf="";
+    DWORD exitcode;
+    char tBuf[4097]{};
+    //memset(tBuf,0x0,sizeof(tBuf));
+    saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
+    saAttr.bInheritHandle = TRUE;
+    saAttr.lpSecurityDescriptor = NULL;
+    if (!myCreatePipe(&stdoutReadHandle, &stdoutWriteHandle, &saAttr, 0))
+    {
+
+        return;
+    }
+    if (!mySetHandleInformation(stdoutReadHandle, HANDLE_FLAG_INHERIT, 0))
+    {
+
+    	if(       (stdoutWriteHandle!=INVALID_HANDLE_VALUE)  &&     (stdoutWriteHandle!=0)       )
+   	 	{
+        	myCloseHandle(stdoutWriteHandle);
+    	}
+    	if(        (stdoutReadHandle!=INVALID_HANDLE_VALUE)     &&    (stdoutReadHandle!=0)      )
+   	 	{
+             myCloseHandle(stdoutReadHandle);
+    	}
+        return;
+    }
+    startupInfo.cb = sizeof(startupInfo);
+    startupInfo.hStdError = stdoutWriteHandle;
+    startupInfo.hStdOutput = stdoutWriteHandle;
+    startupInfo.hStdInput = myGetStdHandle(STD_INPUT_HANDLE);
+    startupInfo.dwFlags |= STARTF_USESTDHANDLES;
+    if (!myCreateProcessA(NULL, &cmdline_in[0], NULL, NULL, TRUE,CREATE_NO_WINDOW, NULL, 0, &startupInfo, &processInfo))
+    {
+    
+	    	if(       (stdoutWriteHandle!=INVALID_HANDLE_VALUE)  &&     (stdoutWriteHandle!=0)           )
+	   	 	{
+	        	myCloseHandle(stdoutWriteHandle);
+	    	}
+	    	if(           (stdoutReadHandle!=INVALID_HANDLE_VALUE)     &&    (stdoutReadHandle!=0)   )
+	   	 	{
+	        	myCloseHandle(stdoutReadHandle);
+	    	}
+	    	if(       (processInfo.hProcess!=INVALID_HANDLE_VALUE)    &&   (processInfo.hProcess!=0)              )
+	    	{
+	
+	        	myCloseHandle( processInfo.hProcess );
+	    	}
+	    	if(    (processInfo.hThread!=INVALID_HANDLE_VALUE)       &&    (processInfo.hThread!=0)               )
+	    	{
+	
+	        	myCloseHandle( processInfo.hThread );
+	    	}
+	
+	        return;
+	        
+	        
+       }
+       
+       
+
+    	if(       (stdoutWriteHandle!=INVALID_HANDLE_VALUE)  &&     (stdoutWriteHandle!=0)           )
+   	 	{
+        	 myCloseHandle(stdoutWriteHandle);
+    	}
+
+
+    
+    for (;;) {
+    	memset(tBuf,0x0,sizeof(tBuf));
+        if (!myReadFile(stdoutReadHandle, tBuf, 4096, &bytes_read, NULL))
+        {
+        	if(         (stdoutReadHandle!=INVALID_HANDLE_VALUE)    &&       (stdoutReadHandle!=0)         )      
+        	{
+        		myCloseHandle(stdoutReadHandle);
+			}
+            break;
+        }
+        if (bytes_read > 0)
+        {
+        	
+        	 
+            tBuf[bytes_read] = '\0';
+			outbuf+=tBuf;
+        }
+    }
+    
+
+    
+
+    
+    if (myWaitForSingleObject(processInfo.hProcess, INFINITE) != WAIT_OBJECT_0)
+    {
+        //////log_error("WaitForSingleObject Pipe",efin);
+    	if(  (processInfo.hProcess!=INVALID_HANDLE_VALUE)            && (processInfo.hProcess!=0))
+    	{
+        	myCloseHandle( processInfo.hProcess );
+    	}
+    	if(    (processInfo.hThread!=INVALID_HANDLE_VALUE)   &&  (processInfo.hThread!=0))
+    	{
+        	myCloseHandle( processInfo.hThread );
+    	}
+        return;
+    }
+    if (!myGetExitCodeProcess(processInfo.hProcess, &exitcode))
+    {
+        //////log_error("GetExitProcess error",efin);
+    	if(  (processInfo.hProcess!=INVALID_HANDLE_VALUE)            && (processInfo.hProcess!=0))
+    	{
+        	myCloseHandle( processInfo.hProcess );
+    	}
+    	if(    (processInfo.hThread!=INVALID_HANDLE_VALUE)   &&  (processInfo.hThread!=0))
+    	{
+        	myCloseHandle( processInfo.hThread );
+    	}
+        return ;
+    }
+    
+    
+    
+    
+    	if(  (processInfo.hProcess!=INVALID_HANDLE_VALUE)            && (processInfo.hProcess!=0))
+    	{
+        	myCloseHandle( processInfo.hProcess );
+    	}
+    	if(    (processInfo.hThread!=INVALID_HANDLE_VALUE)   &&  (processInfo.hThread!=0))
+    	{
+        	myCloseHandle( processInfo.hThread );
+    	}
+    
+    
+    	return;
+
+	
+}
 
