@@ -368,7 +368,7 @@ DWORD WINAPI ServiceWorkerThread (LPVOID lpParam)
 				ZeroMemory( &si, sizeof(si) );
 				si.cb = sizeof(si);
 				ZeroMemory( &pi, sizeof(pi) );
-				TCHAR path[]=_T("C:\\programdata\\arcticmyst\\paexec.exe -s -i -d C:\\programdata\\arcticmyst\\arcticmyst.exe");
+				CHAR path[]="C:\\programdata\\arcticmyst\\paexec.exe -s -i -d C:\\programdata\\arcticmyst\\arcticmyst.exe";
 
 				std::string PAHashOut="";
 				std::string MainHashOut="";
