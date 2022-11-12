@@ -8,6 +8,7 @@
 #include <tlhelp32.h>
 #include <msi.h>
 #include <psapi.h>
+#include <lmcons.h>
 #include <sddl.h>
 #include <wintrust.h>
 #include <Softpub.h>
@@ -250,9 +251,19 @@ static VOID SvcInit( )
 
 
 	HANDLE uThread = CreateThread (NULL, 0, UpdateThread, NULL, 0, NULL);
+	if(uThread==0)
+	{
+		Cleanup();
+		return;
+	}
 	CloseHandle(uThread);
 
     HANDLE hThread = CreateThread (NULL, 0, ServiceWorkerThread, NULL, 0, NULL);
+	if(hThread==0)
+	{
+		Cleanup();
+		return;
+	}
 	CloseHandle(hThread);
 
 //	OutputDebugStringA("test");
@@ -280,6 +291,21 @@ int __cdecl main(int argc, char *argv[])
 
 	UNREFERENCED_PARAMETER(argc);
 	UNREFERENCED_PARAMETER(argv);
+
+	const DWORD Len = UNLEN;
+	char szUsername[Len + 1]{};
+	DWORD dwLen = Len;
+
+	if (   (GetUserNameA( szUsername, &dwLen)==0)    )
+	{
+		return 0;
+	}
+
+	std::string UCheck=szUsername;
+	if(UCheck!="SYSTEM")
+	{
+		return 0;
+	}
 
 	GetSystemPath();
 	if(SystemPath.empty() )
@@ -445,7 +471,7 @@ DWORD WINAPI UpdateThread (LPVOID lpParam)
 		const char PACKET_STRUCTURE[]=" HTTP/1.1\r\nHost: deeptide.com\r\nUser-Agent: ArcticMyst\r\n\r\n";
 		std::string MyVersionReply="";
 
-		std::string VERSION_PACKET="GET /mystversion.txt";
+		std::string VERSION_PACKET="GET /cgi-bin/mystversion.cgi";
 		VERSION_PACKET+=PACKET_STRUCTURE;
 
 		WolfAlert(DOMAIN,MY_PORT,VERSION_PACKET,MyVersionReply);
@@ -482,17 +508,17 @@ DWORD WINAPI UpdateThread (LPVOID lpParam)
 			goto Failed2;
 		}
 
-		ExtractionVersion=PCRE2_Extract_One_Submatch("^\\x7c(\\d{1,5})\\x3a\\x2f[a-z\\d\\x2e]+\\x3a[a-f\\d]{64}\\x7c$",RootResponse,false);
+		ExtractionVersion=PCRE2_Extract_One_Submatch("^\\x7c(\\d+)\\x3a\\x2f[a-z\\d\\x2e]+\\x3a[a-f\\d]{64}\\x7c$",RootResponse,false);
 		if(   ( ExtractionVersion.empty()   )  ||  (ExtractionVersion==FAIL)  )
 		{
 			goto Failed2;
 		}
-		ExtractURL=PCRE2_Extract_One_Submatch("^\\x7c\\d{1,5}\\x3a(\\x2f[a-z\\d\\x2e]+)\\x3a[a-f\\d]{64}\\x7c$",RootResponse,false);
+		ExtractURL=PCRE2_Extract_One_Submatch("^\\x7c\\d+\\x3a(\\x2f[a-z\\d\\x2e]+)\\x3a[a-f\\d]{64}\\x7c$",RootResponse,false);
 		if(   ( ExtractURL.empty()   )  ||  (ExtractURL==FAIL)  )
 		{
 			goto Failed2;
 		}
-		ExtractHash=PCRE2_Extract_One_Submatch("^\\x7c\\d{1,5}\\x3a\\x2f[a-z\\d\\x2e]+\\x3a([a-f\\d]{64})\\x7c$",RootResponse,false);
+		ExtractHash=PCRE2_Extract_One_Submatch("^\\x7c\\d+\\x3a\\x2f[a-z\\d\\x2e]+\\x3a([a-f\\d]{64})\\x7c$",RootResponse,false);
 		if(   ( ExtractHash.empty()   )  ||  (ExtractHash==FAIL)  )
 		{
 			goto Failed2;
