@@ -315,7 +315,7 @@ static HWND hUsrTxt=0;
 static const char EXPLORER[]="explorer.exe";
 
 static TCHAR COMPUTER_NAME[MAX_COMPUTERNAME_LENGTH + 2] {};
-static std::string COMPNAMP_URLENC="";
+//static std::string COMPNAMP_URLENC="";
 static const std::string SYSTEM="SYSTEM";
 
 
@@ -1458,9 +1458,9 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT message,WPARAM wParam,LPARAM lPar
 			myLeaveCriticalSection(&ExeVectorCritical);
 
 			{
-				char zBuf[256]{};
-				sprintf(zBuf,"Injecting: %i",(int)std::stol(ParsedPid));
-				OutputDebugString(zBuf);
+				//char zBuf[256]{};
+				//sprintf(zBuf,"Injecting: %i",(int)std::stol(ParsedPid));
+				//OutputDebugString(zBuf);
 			//	mySleep(50000);
 				//InjectProcessThread( (LPVOID)(UINT_PTR)std::stol(ParsedPid) );				
 				DWORD shadeLog;				
@@ -1487,7 +1487,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT message,WPARAM wParam,LPARAM lPar
 				//InjectProcessThread((LPVOID)pParms);
 
 				//mySleep(8192);
-				OutputDebugString("Injected");
+				//OutputDebugString("Injected");
 			//	mySleep(50000);
 			}
 			nopid:
@@ -4462,7 +4462,7 @@ static bool ci_endswith(const std::string& value, const std::string& ending) {
 }
 
 static void CALLBACK myAsyncWaitCallback(LPVOID pParm , BOOLEAN TimerOrWaitFired) {
-	
+	UNREFERENCED_PARAMETER(TimerOrWaitFired);
 	AsyncWaitStruct *p = (AsyncWaitStruct*)pParm;
 	
 	DWORD outCode=0;
@@ -4496,6 +4496,7 @@ static void CALLBACK myAsyncWaitCallback(LPVOID pParm , BOOLEAN TimerOrWaitFired
 	
 	myUnregisterWait( p->hWaitHandle );
 
+	/*
 	char msg[64];
 	if 	(TimerOrWaitFired) {
 		sprintf(msg,"Timed out injecting process %i",(int)p->dwProcPID);
@@ -4503,6 +4504,7 @@ static void CALLBACK myAsyncWaitCallback(LPVOID pParm , BOOLEAN TimerOrWaitFired
 		sprintf(msg,"process %i Waited and cleaned up succesfully",(int)p->dwProcPID);
 	}
 	OutputDebugString(msg);	
+	*/
 
 	delete p;
 

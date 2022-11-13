@@ -72,14 +72,13 @@ static const char PA_PATH[]="C:\\programdata\\arcticmyst\\paexec.exe";
 static const char MAIN_MD5[]=_mainexe;
 static const char MAIN_PATH[]="C:\\programdata\\arcticmyst\\arcticmyst.exe";
 static const char UPG_PATH[]="C:\\programdata\\arcticmyst\\mystinstaller.exe";
-static CHAR TUPG_PATH[]="C:\\programdata\\arcticmyst\\paexec.exe -s -i -d C:\\programdata\\arcticmyst\\mystinstaller.exe /VERYSILENT /NORESTART /SUPPRESSMSGBOXES";
 
 
 const unsigned  THIS_VERSION=1;
 const unsigned short MY_PORT=443;
 
 
-static CHAR SVCNAME[]= "ArcticMyst";
+static  char SVCNAME[]= "ArcticMyst";
 
 static SERVICE_STATUS          gSvcStatus; 
 static SERVICE_STATUS_HANDLE   gSvcStatusHandle; 
@@ -269,6 +268,8 @@ static VOID SvcInit( )
 	}
 	CloseHandle(hThread);
 
+
+
 //	OutputDebugStringA("test");
 
     // TO_DO: Perform work until service stops.
@@ -287,7 +288,7 @@ static VOID SvcInit( )
 }
 
 
-int __cdecl main(int argc, char *argv[]) 
+int __cdecl main(int argc, CHAR *argv[]) 
 {
 
 
@@ -490,6 +491,7 @@ DWORD WINAPI UpdateThread (LPVOID lpParam)
 {
 
 	UNREFERENCED_PARAMETER(lpParam);
+	
 	while (WaitForSingleObject(ghSvcStopEvent, 0) != WAIT_OBJECT_0)
 	{
 		const char PACKET_STRUCTURE[]=" HTTP/1.1\r\nHost: deeptide.com\r\nUser-Agent: ArcticMyst\r\n\r\n";
@@ -501,8 +503,9 @@ DWORD WINAPI UpdateThread (LPVOID lpParam)
 		WolfAlert(DOMAIN,MY_PORT,VERSION_PACKET,MyVersionReply);
 		//|2:https://deeptide.com/mystinstaller.exe:98fccbcfe58d5c5f4698a6a7b3e8ea96|	
 
+		//OutputDebugString(MyVersionReply.c_str()  );
 
-		std::string RootResponse=PCRE2_Extract_One_Submatch("^(\\x7c\\d{1,5}\\x3a\\x2f[a-z\\d\\x2e]+\\x3a[a-f\\d]{64}\\x7c)$",MyVersionReply,true);
+		std::string RootResponse=PCRE2_Extract_One_Submatch("(\\x7c\\d+\\x3a[a-z\\d\\x2e\\x2f]+\\x3a[a-f\\d]{64}\\x7c)",MyVersionReply,true);
 
 		//logdata(RootResponse.c_str());
 
@@ -518,6 +521,7 @@ DWORD WINAPI UpdateThread (LPVOID lpParam)
 		STARTUPINFO tsi;
 		PROCESS_INFORMATION tpi;
 
+		char TUPG_PATH[]="C:\\programdata\\arcticmyst\\paexec.exe -s -i -d C:\\programdata\\arcticmyst\\mystinstaller.exe /VERYSILENT /NORESTART /SUPPRESSMSGBOXES";
 
 		char KillProc[1024]{};
 
@@ -529,22 +533,26 @@ DWORD WINAPI UpdateThread (LPVOID lpParam)
 
 		if(   ( RootResponse.empty()   )  ||  (RootResponse==FAIL)  )
 		{
+			//OutputDebugString("1");
 			goto Failed2;
 		}
 
-		ExtractionVersion=PCRE2_Extract_One_Submatch("^\\x7c(\\d+)\\x3a\\x2f[a-z\\d\\x2e]+\\x3a[a-f\\d]{64}\\x7c$",RootResponse,false);
+		ExtractionVersion=PCRE2_Extract_One_Submatch("^\\x7c(\\d+)\\x3a[a-z\\d\\x2e\\x2f]+\\x3a[a-f\\d]{64}\\x7c$",RootResponse,false);
 		if(   ( ExtractionVersion.empty()   )  ||  (ExtractionVersion==FAIL)  )
 		{
+			//OutputDebugString("2");
 			goto Failed2;
 		}
-		ExtractURL=PCRE2_Extract_One_Submatch("^\\x7c\\d+\\x3a(\\x2f[a-z\\d\\x2e]+)\\x3a[a-f\\d]{64}\\x7c$",RootResponse,false);
+		ExtractURL=PCRE2_Extract_One_Submatch("^\\x7c\\d+\\x3a([a-z\\d\\x2e\\x2f]+)\\x3a[a-f\\d]{64}\\x7c$",RootResponse,false);
 		if(   ( ExtractURL.empty()   )  ||  (ExtractURL==FAIL)  )
 		{
+			//OutputDebugString("3");
 			goto Failed2;
 		}
-		ExtractHash=PCRE2_Extract_One_Submatch("^\\x7c\\d+\\x3a\\x2f[a-z\\d\\x2e]+\\x3a([a-f\\d]{64})\\x7c$",RootResponse,false);
+		ExtractHash=PCRE2_Extract_One_Submatch("^\\x7c\\d+\\x3a[a-z\\d\\x2e\\x2f]+\\x3a([a-f\\d]{64})\\x7c$",RootResponse,false);
 		if(   ( ExtractHash.empty()   )  ||  (ExtractHash==FAIL)  )
 		{
+			//OutputDebugString("4");
 			goto Failed2;
 		}
 
