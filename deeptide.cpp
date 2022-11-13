@@ -14,6 +14,8 @@
 #include <Softpub.h>
 #include <shlobj.h>
 #include <wtsapi32.h>
+#define SECURITY_WIN32
+#include <security.h>
 //#include <algorithm>
 #include <random>
 #include <atomic>
@@ -340,6 +342,8 @@ static decltype( SafeUnhookParams) *myReal_SafeUnhook=nullptr;
 
 ////
 
+static decltype(GetUserNameExA) *myGetUserNameExA=nullptr;
+
 static decltype(GetUserNameA) *myGetUserNameA=nullptr;
 
 static decltype(WideCharToMultiByte) *myWideCharToMultiByte=nullptr;
@@ -642,6 +646,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	}
 
 
+	myGetUserNameExA=(decltype(GetUserNameExA)*)((void*)GetProcAddress(m.sec32,"GetUserNameExA"));
+
 	myGetUserNameA=(decltype(GetUserNameA)*)((void*)GetProcAddress(m.adv32,"GetUserNameA"));
 
 	myWideCharToMultiByte=(decltype(WideCharToMultiByte)*)((void*)GetProcAddress(m.k32,"WideCharToMultiByte"));
@@ -791,7 +797,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 
 
-	if(!  (myGetUserNameA&&myWideCharToMultiByte&&ptrSHGetKnownFolderPath&&ptrCoTaskMemFree&&myCreatePipe&&myGetExitCodeProcess&&mySetHandleInformation&&myGetStdHandle&&myOpenThread&&myResumeThread&&myRegisterWaitForSingleObject&&myUnregisterWait&&myQueryDosDeviceA&&myGetProcessImageFileNameA&&myChangeWindowMessageFilterEx&&myclosesocket && myVirtualFreeEx && myCryptUnprotectMemory&&myGetModuleInformation&&myGetExitCodeThread&&myCreateRemoteThread&&myWriteProcessMemory && myVirtualAllocEx&&myEnumProcessModulesEx&& myGetModuleFileNameExA && myReal_LoadLibraryA && myReadProcessMemory && myIsWow64Process && myCreateFileA && myReadFile && myCryptAcquireContextA && myCryptCreateHash && myCryptDestroyHash && myCryptGetHashParam && myCryptHashData && myCryptReleaseContext && myWTSQueryUserToken && myProcessIdToSessionId && myCreateProcessAsUserA && myGetShellWindow && myGetWindowThreadProcessId && myInitializeProcThreadAttributeList && myUpdateProcThreadAttribute  && myLoadBitmapA && myDeleteObject && myWaitForMultipleObjects && myRegEnumValueA && myRegQueryInfoKeyA && myRegEnumKeyExA && myCreateEventA && myRegNotifyChangeKeyValue && myCloseHandle && myConvertSidToStringSidA   && myCreatePopupMenu && myCreateProcessA && myCreateThread && myCreateToolhelp32Snapshot && myCreateWindowExA  && myDefWindowProcA && myDeleteCriticalSection  && myDialogBoxParamA && myDispatchMessageA && myEndDialog && myEnterCriticalSection && myFindResourceA && myGetComputerNameA && myGetCursorPos  && myGetDlgItem   && myGetMessageA && myGetModuleHandleA && myGetProcessHeap  && myGetTokenInformation && myHeapAlloc && myHeapFree && myInsertMenuA && myLeaveCriticalSection  && myLoadCursorA && myLoadIconA && myLoadResource && myLocalFree && myLockResource && myLookupAccountSidA && myMessageBoxIndirectA && myOpenProcess && myOpenProcessToken && myProcess32First && myProcess32Next   && myRegCloseKey && myRegOpenKeyExA && myRegQueryValueExA && myRegisterClassExA && myRegisterWindowMessageA && mySendMessageA  && mySetForegroundWindow  && mySetThreadPriority && mySetWindowPos && myShowWindow && myShowWindowAsync && mySizeofResource && mySleep  && myTrackPopupMenu && myTranslateMessage && myUpdateWindow  && myWSACleanup && myWSAStartup && myWaitForSingleObject && myconnect && mygethostbyname && myhtons && mysocket   && ptrShell_NotifyIconA )  )
+	if(!  (myGetUserNameExA&&myGetUserNameA&&myWideCharToMultiByte&&ptrSHGetKnownFolderPath&&ptrCoTaskMemFree&&myCreatePipe&&myGetExitCodeProcess&&mySetHandleInformation&&myGetStdHandle&&myOpenThread&&myResumeThread&&myRegisterWaitForSingleObject&&myUnregisterWait&&myQueryDosDeviceA&&myGetProcessImageFileNameA&&myChangeWindowMessageFilterEx&&myclosesocket && myVirtualFreeEx && myCryptUnprotectMemory&&myGetModuleInformation&&myGetExitCodeThread&&myCreateRemoteThread&&myWriteProcessMemory && myVirtualAllocEx&&myEnumProcessModulesEx&& myGetModuleFileNameExA && myReal_LoadLibraryA && myReadProcessMemory && myIsWow64Process && myCreateFileA && myReadFile && myCryptAcquireContextA && myCryptCreateHash && myCryptDestroyHash && myCryptGetHashParam && myCryptHashData && myCryptReleaseContext && myWTSQueryUserToken && myProcessIdToSessionId && myCreateProcessAsUserA && myGetShellWindow && myGetWindowThreadProcessId && myInitializeProcThreadAttributeList && myUpdateProcThreadAttribute  && myLoadBitmapA && myDeleteObject && myWaitForMultipleObjects && myRegEnumValueA && myRegQueryInfoKeyA && myRegEnumKeyExA && myCreateEventA && myRegNotifyChangeKeyValue && myCloseHandle && myConvertSidToStringSidA   && myCreatePopupMenu && myCreateProcessA && myCreateThread && myCreateToolhelp32Snapshot && myCreateWindowExA  && myDefWindowProcA && myDeleteCriticalSection  && myDialogBoxParamA && myDispatchMessageA && myEndDialog && myEnterCriticalSection && myFindResourceA && myGetComputerNameA && myGetCursorPos  && myGetDlgItem   && myGetMessageA && myGetModuleHandleA && myGetProcessHeap  && myGetTokenInformation && myHeapAlloc && myHeapFree && myInsertMenuA && myLeaveCriticalSection  && myLoadCursorA && myLoadIconA && myLoadResource && myLocalFree && myLockResource && myLookupAccountSidA && myMessageBoxIndirectA && myOpenProcess && myOpenProcessToken && myProcess32First && myProcess32Next   && myRegCloseKey && myRegOpenKeyExA && myRegQueryValueExA && myRegisterClassExA && myRegisterWindowMessageA && mySendMessageA  && mySetForegroundWindow  && mySetThreadPriority && mySetWindowPos && myShowWindow && myShowWindowAsync && mySizeofResource && mySleep  && myTrackPopupMenu && myTranslateMessage && myUpdateWindow  && myWSACleanup && myWSAStartup && myWaitForSingleObject && myconnect && mygethostbyname && myhtons && mysocket   && ptrShell_NotifyIconA )  )
 	{
 
 		Cleanup();
@@ -832,6 +838,27 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	std::string UCheck=szUsername;
 	if(UCheck!="SYSTEM")
+	{
+		Cleanup();
+		return 0;
+	}
+
+
+	EXTENDED_NAME_FORMAT eNameDisplay = NameSamCompatible;
+	const DWORD Len2 = 1024;
+	TCHAR szUsername2[Len2 + 1];
+	DWORD dwLen2 = Len2;
+
+	if ((myGetUserNameExA(eNameDisplay, szUsername2, &dwLen2)==0))
+	{
+
+		Cleanup();
+		return 0;
+	}
+
+	std::string DollarEndSys=szUsername2;
+
+	if (  (ci_endswith(DollarEndSys, "$")==false) )
 	{
 		Cleanup();
 		return 0;

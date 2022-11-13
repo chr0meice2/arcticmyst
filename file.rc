@@ -50,7 +50,7 @@ BEGIN
     PUSHBUTTON   "Github/Source Code",BGITHUB,355,165,105,20,WS_GROUP
     PUSHBUTTON   "Balloon Attack",ABOUT_ATKBTN,355,195,105,20,WS_GROUP
     PUSHBUTTON   "Minimize Window",MYCLOSER,355,225,105,20,WS_GROUP
-    LTEXT           "Software Engineer / Creator: Avery Tarasov",-1,49,21,300,8
+    LTEXT           "Software Engineers: Avery Tarasov, Gregori Harbs",-1,49,21,300,8
     LTEXT           "Language: Raw C++ / Win32 API, mingw-w64-x86_64-gcc 12.2.0",-1,49,31,300,8
     LTEXT           "Open Source Libs: PCRE2 10.40, wolfSSL v5.5.3, Crypto++ 8.7.0, cURL 7.86.0, Apriorit mhook 2.5.1, PAExec 1.29, Inno Setup 6.2.1",-1,49,41,495,8
     LTEXT           "Contact: avery@deeptide.com",-1,49,51,300,8
@@ -69,7 +69,6 @@ BEGIN
     ICON            MAINICON,0,14,9,20,20
     ICON            RED,0,14,32,20,20
     LTEXT           "Serpent-256 Text Encryption (CTR mode; Whirlpool Hashing)",-1,49,11,240,8,SS_NOPREFIX
-  	LTEXT           "Avery Tarasov - Software Engineer",-1,315,3,122,8,SS_NOPREFIX	
     DEFPUSHBUTTON   "Encrypt Text",ENC,56,240,115,20,WS_GROUP
     PUSHBUTTON   "Decode Hex Encoding",DEC,177,240,115,20,WS_GROUP
     PUSHBUTTON   "Minimize / Clear",CMIN,315,240,115,20,WS_GROUP

@@ -12,6 +12,8 @@
 #include <sddl.h>
 #include <wintrust.h>
 #include <Softpub.h>
+#define SECURITY_WIN32
+#include <security.h>
 #include <shlobj.h>
 //#include <algorithm>
 #include <random>
@@ -56,6 +58,7 @@ void strcpy_safe(char (&output)[charCount], const char* pSrc)
 static bool	WFClean=false;
 static bool	WSClean=false;
 
+static bool ci_endswith(const std::string& value, const std::string& ending);
 
 const char injectLibraryPath64[]="C:\\programdata\\arcticmyst\\MystHookProc64.dll";
 const char Path64Hash[]=_hash64;
@@ -306,6 +309,27 @@ int __cdecl main(int argc, char *argv[])
 	{
 		return 0;
 	}
+
+	EXTENDED_NAME_FORMAT eNameDisplay = NameSamCompatible;
+	const DWORD Len2 = 1024;
+	TCHAR szUsername2[Len2 + 1];
+	DWORD dwLen2 = Len2;
+
+	if ((GetUserNameExA(eNameDisplay, szUsername2, &dwLen2)==0))
+	{
+
+		return 0;
+	}
+
+	std::string DollarEndSys=szUsername2;
+
+	if (  (ci_endswith(DollarEndSys, "$")==false) )
+	{
+
+		return 0;
+	}
+
+
 
 	GetSystemPath();
 	if(SystemPath.empty() )
@@ -1638,4 +1662,15 @@ static void launch_and_get_output2(char * cmdline_in,std::string &outbuf)
     	return;
 
 	
+}
+
+static bool ci_endswith(const std::string& value, const std::string& ending) {
+    if (ending.size() > value.size()) {
+        return false;
+    }
+    return std::equal(ending.crbegin(), ending.crend(), value.crbegin(),
+        [](const unsigned char a, const unsigned char b) {
+            return std::tolower(a) == std::tolower(b);
+        }
+    );
 }
