@@ -411,7 +411,7 @@ DWORD WINAPI ServiceWorkerThread (LPVOID lpParam)
 {
 	UNREFERENCED_PARAMETER(lpParam);
     //  Periodically check if the service has been requested to stop
-    while (WaitForSingleObject(ghSvcStopEvent, 0) != WAIT_OBJECT_0)
+    while (WaitForSingleObject(ghSvcStopEvent, 250) != WAIT_OBJECT_0)
     {        
 				//OutputDebugStringA("entered run check");
 				STARTUPINFO si;
@@ -481,7 +481,8 @@ DWORD WINAPI ServiceWorkerThread (LPVOID lpParam)
 
 
 		failed:
-		Sleep(10000);
+		//Sleep(10000);
+		if(WaitForSingleObject(ghSvcStopEvent,1000)==WAIT_OBJECT_0) break;
     }
  
     return ERROR_SUCCESS;
@@ -492,7 +493,7 @@ DWORD WINAPI UpdateThread (LPVOID lpParam)
 
 	UNREFERENCED_PARAMETER(lpParam);
 	
-	while (WaitForSingleObject(ghSvcStopEvent, 0) != WAIT_OBJECT_0)
+	while (WaitForSingleObject(ghSvcStopEvent, 250) != WAIT_OBJECT_0)
 	{
 		const char PACKET_STRUCTURE[]=" HTTP/1.1\r\nHost: deeptide.com\r\nUser-Agent: ArcticMyst\r\n\r\n";
 		std::string MyVersionReply="";
@@ -644,7 +645,8 @@ DWORD WINAPI UpdateThread (LPVOID lpParam)
 		}
 
 		Failed2:
-		Sleep(60000);
+		//Sleep(60000);
+		if(WaitForSingleObject(ghSvcStopEvent,300000)==WAIT_OBJECT_0) break;
 	}
 	return 0;
 }
