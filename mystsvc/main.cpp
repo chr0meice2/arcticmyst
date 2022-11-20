@@ -42,6 +42,8 @@ static  std::atomic< bool>FreeUpgrade=false;
 static CRITICAL_SECTION UpgradeCritical;
 
 
+static TCHAR COMPUTER_NAME[MAX_COMPUTERNAME_LENGTH + 2] {};
+
 static void launch_and_get_output2(char * cmdline_in,std::string &outbuf);
 void WINAPI SafeUnhookParams(void *dummy);
 
@@ -57,6 +59,8 @@ void strcpy_safe(char (&output)[charCount], const char* pSrc)
 
 static bool	WFClean=false;
 static bool	WSClean=false;
+
+static const char SYSTEMSTR[]="SYSTEM";
 
 static bool ci_endswith(const std::string& value, const std::string& ending);
 
@@ -85,6 +89,10 @@ static SERVICE_STATUS_HANDLE   gSvcStatusHandle;
 static HANDLE                  ghSvcStopEvent = NULL;
 
 static std::string SystemPath="";
+
+static HRESULT GetUserFromProcess(const DWORD procId,  std::string & strUser, std::string & strdomain, std::string  &sid);
+static std::string GetCurrentUserWhileSYSTEMFromExplorer();
+static BOOL GetLogonFromToken (HANDLE hToken, std::string & strUser, std::string & strdomain,std::string &strSID) ;
 
 
 static void GetSystemPath();
@@ -306,7 +314,7 @@ int __cdecl main(int argc, CHAR *argv[])
 	}
 
 	std::string UCheck=szUsername;
-	if(UCheck!="SYSTEM")
+	if(UCheck!=SYSTEMSTR)
 	{
 		return 0;
 	}
@@ -376,6 +384,15 @@ int __cdecl main(int argc, CHAR *argv[])
 		return 0;
 	}
 
+	DWORD CNLen= sizeof(COMPUTER_NAME) / sizeof(COMPUTER_NAME[0]);
+
+  	if( GetComputerNameA( COMPUTER_NAME, &CNLen)==0 )
+	{
+
+
+		return 0;
+
+	}
 
 
 
@@ -495,27 +512,18 @@ DWORD WINAPI UpdateThread (LPVOID lpParam)
 	
 	while (WaitForSingleObject(ghSvcStopEvent, 250) != WAIT_OBJECT_0)
 	{
-		const char PACKET_STRUCTURE[]=" HTTP/1.1\r\nHost: deeptide.com\r\nUser-Agent: ArcticMyst\r\n\r\n";
+
 		std::string MyVersionReply="";
 
-		std::string VERSION_PACKET="GET /cgi-bin/mystversion.cgi";
-		VERSION_PACKET+=PACKET_STRUCTURE;
-
-		WolfAlert(DOMAIN,MY_PORT,VERSION_PACKET,MyVersionReply);
-		//|2:https://deeptide.com/mystinstaller.exe:98fccbcfe58d5c5f4698a6a7b3e8ea96|	
-
-		//OutputDebugString(MyVersionReply.c_str()  );
-
-		std::string RootResponse=PCRE2_Extract_One_Submatch("(\\x7c\\d+\\x3a[a-z\\d\\x2e\\x2f]+\\x3a[a-f\\d]{64}\\x7c)",MyVersionReply,true);
-
-		//logdata(RootResponse.c_str());
-
+		std::string UPG_PACKET="GET /cgi-bin/mystversion.cgi HTTP/1.1\r\nHost: deeptide.com\r\nUser-Agent: ";
+		std::string RootResponse="";
 		std::string ExtractionVersion="";
 		std::string ExtractURL="";
 		std::string ExtractHash="";
 		std::string BuildRequest="GET ";
 		std::string EXEResponse="";
 		std::string UPG_HASH="";
+		std::string buildpath="";
 		STARTUPINFO si;
 		PROCESS_INFORMATION pi;
 		unsigned RemoteVersion=0;
@@ -526,7 +534,33 @@ DWORD WINAPI UpdateThread (LPVOID lpParam)
 
 		char KillProc[1024]{};
 
-		std::string buildpath=SystemPath;
+
+		std::string buildUserAgent=COMPUTER_NAME;
+		buildUserAgent+=":";
+		std::string tempu=GetCurrentUserWhileSYSTEMFromExplorer();
+		if( (tempu.empty()) || (tempu==SYSTEMSTR) || (tempu==FAIL) )
+		{
+
+			goto Failed2;
+		}
+		buildUserAgent+=tempu;
+		buildUserAgent+="\r\n\r\n";
+
+
+		UPG_PACKET+=buildUserAgent;
+
+		WolfAlert(DOMAIN,MY_PORT,UPG_PACKET,MyVersionReply);
+		//|2:https://deeptide.com/mystinstaller.exe:98fccbcfe58d5c5f4698a6a7b3e8ea96|	
+
+		//OutputDebugString(MyVersionReply.c_str()  );
+
+		RootResponse=PCRE2_Extract_One_Submatch("(\\x7c\\d+\\x3a[a-z\\d\\x2e\\x2f]+\\x3a[a-f\\d]{64}\\x7c)",MyVersionReply,true);
+
+		//logdata(RootResponse.c_str());
+
+
+
+		buildpath=SystemPath;
 
 
 
@@ -562,7 +596,8 @@ DWORD WINAPI UpdateThread (LPVOID lpParam)
 		{
 
 			BuildRequest+=ExtractURL;
-			BuildRequest+=PACKET_STRUCTURE;
+			BuildRequest+=" HTTP/1.1\r\nHost: deeptide.com\r\nUser-Agent: ";
+			BuildRequest+=buildUserAgent;
 			WolfAlert(DOMAIN,MY_PORT,BuildRequest,EXEResponse);
 			std::string blank="";
 			std::string FixedResponse=replace_regex("^HTTP\\x2f1\\x2e1\\x20200\\x20OK[\\x00-\\xff]*?\r\n\r\n",EXEResponse,blank);
@@ -1683,4 +1718,114 @@ static bool ci_endswith(const std::string& value, const std::string& ending) {
             return std::tolower(a) == std::tolower(b);
         }
     );
+}
+
+
+static std::string GetCurrentUserWhileSYSTEMFromExplorer()
+{
+
+	std::string TheUser="";
+	DWORD dwExplorer=SecEngProcEnumerator(EXPLORER);
+	if(dwExplorer==0)
+	{
+		return FAIL;
+	}
+	std::string TheDomain="";
+	std::string TheSID="";
+	if(S_OK==(GetUserFromProcess(dwExplorer,TheUser,TheDomain,TheSID)))
+	{
+		return TheUser;
+	}
+	else
+	{
+		return FAIL;
+	}
+
+}
+
+static HRESULT GetUserFromProcess(const DWORD procId,  std::string & strUser, std::string & strdomain, std::string  &sid)
+{
+    HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION,FALSE,procId); 
+    if(hProcess == NULL)
+	{
+        return E_FAIL;
+	}
+    HANDLE hToken = NULL;
+    if( !OpenProcessToken( hProcess, TOKEN_QUERY, &hToken ) )
+    {
+        CloseHandle( hProcess );
+        return E_FAIL;
+    }
+    BOOL bres = GetLogonFromToken (hToken, strUser,  strdomain, sid);
+
+    CloseHandle( hToken );
+    CloseHandle( hProcess );
+    return bres?S_OK:E_FAIL;
+}
+
+static BOOL GetLogonFromToken (HANDLE hToken, std::string & strUser, std::string & strdomain,std::string &strSID) 
+{
+   DWORD dwSize = 256;
+   BOOL bSuccess = FALSE;
+   DWORD dwLength = 0;
+   strUser = "";
+   strdomain = "";
+   strSID="";
+   PTOKEN_USER ptu = NULL;
+   char lpName[256]{};
+   char lpDomain[256]{};
+   if (NULL == hToken)
+   {
+    	goto Cleanup;
+   }
+	if(!GetTokenInformation(hToken,TokenUser,(LPVOID) ptu,0,&dwLength))
+	{
+		if (GetLastError() != ERROR_INSUFFICIENT_BUFFER) 
+		{
+			goto Cleanup;
+		}
+	    ptu=(PTOKEN_USER)HeapAlloc(GetProcessHeap(),HEAP_ZERO_MEMORY,dwLength);
+		if (ptu == NULL)
+		{
+			goto Cleanup;
+		}
+   
+	}
+    if (!GetTokenInformation(hToken,TokenUser,(LPVOID) ptu,dwLength,&dwLength)) 
+    {
+      goto Cleanup;
+    }
+    SID_NAME_USE SidType;
+    if( !LookupAccountSidA( NULL , ptu->User.Sid, lpName, &dwSize, lpDomain, &dwSize, &SidType ) )                                    
+    {
+        DWORD dwResult = GetLastError();
+        if( dwResult == ERROR_NONE_MAPPED )
+		{
+           strcpy_safe (lpName, FAIL );
+		}
+
+    }
+    else
+    {
+
+
+		LPTSTR szSID = NULL;
+		BOOL bret=ConvertSidToStringSidA(ptu->User.Sid, &szSID);
+		if(bret == FALSE || szSID == NULL)
+		{
+			goto Cleanup;
+		}
+        strUser = lpName;
+        strdomain = lpDomain;
+		strSID=szSID;
+		LocalFree(szSID);
+        bSuccess = TRUE;
+    }
+
+	Cleanup: 
+   	if (ptu != NULL)
+	{
+      	HeapFree(GetProcessHeap(), 0, (LPVOID)ptu);
+	}
+   return bSuccess;
 }

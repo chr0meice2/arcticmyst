@@ -68,7 +68,7 @@ my $THEUA=$ENV{'HTTP_USER_AGENT'};
                 $USER=lc($2);
 
                 my $dsn = "dbi:mysql:seceng:localhost:3306";
-                my $dbh = DBI->connect($dsn, 'root', 'kw52kkayasDeF0K', { RaiseError => 1 });
+                my $dbh = DBI->connect($dsn, 'root', 'jsT01byi1?qrLm2!', { RaiseError => 1 });
 				
 				
 				foreach my $i (@regarray) 

@@ -64,7 +64,7 @@ my $THEUA=$ENV{'HTTP_USER_AGENT'};
                         die;
                 }
                 my $dsn = "dbi:mysql:seceng:localhost:3306";
-                my $dbh = DBI->connect($dsn, 'root', 'kw52kkayasDeF0K', { RaiseError => 1 });
+                my $dbh = DBI->connect($dsn, 'root', 'jsT01byi1?qrLm2!', { RaiseError => 1 });
 
                 my $query=" INSERT INTO hookops (hash, thedate, compname,username,ip,myst,myversion) VALUES (?, ?, ?, ?, ?, ?, ?)  ON DUPLICATE KEY UPDATE `thedate`=values(`thedate`),  `compname`=values(`compname`),`username`=values(`username`),`ip`=values(`ip`), `myst`=values(`myst`), `myversion`=values(`myversion`);";
 
