@@ -1456,10 +1456,11 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT message,WPARAM wParam,LPARAM lPar
 			myLeaveCriticalSection(&LogMessageCS);
 
 
-			//OutputDebugStringA("decrypt success");
+			//OutputDebugStringA("enter evc");
 			myEnterCriticalSection(&ExeVectorCritical);
 			FileExecutions.push_back(    pEncryptedText .data()   );
 			myLeaveCriticalSection(&ExeVectorCritical);
+			//OutputDebugStringA("leave evc");
 
 			{
 				//char zBuf[256]{};
@@ -3258,14 +3259,14 @@ static void POSTExeData()
 {
 
 
-
+	//OutputDebugStringA("Before EVC post exe");
 	myEnterCriticalSection(&ExeVectorCritical);
 
 
 
 	if(FileExecutions.empty() )
 	{
-
+		//OutputDebugStringA("FE empty");
 		myLeaveCriticalSection(&ExeVectorCritical);
 		return ; //hobbit fart
 	}
@@ -3274,16 +3275,20 @@ static void POSTExeData()
 	std::vector<std::string> FileExecutionsCopy;
 
 	FileExecutionsCopy.assign(FileExecutions.begin(), FileExecutions.end() );
-
+	//OutputDebugStringA("assigned...");
 
 	FileExecutions.clear();
 
+	//OutputDebugStringA("cleared...");
 
 	myLeaveCriticalSection(&ExeVectorCritical);
+
+	//OutputDebugStringA("After EVC leave");
 
 
 	if(FileExecutionsCopy.empty() )
 	{
+		//OutputDebugStringA("FEC empty");
 		return;//who does that young fart think he is?
 	}
 
@@ -3297,7 +3302,7 @@ static void POSTExeData()
 		std::string ParsedExe=PCRE2_Extract_One_Submatch(ExeRgx,FileExecutionsCopy[f],false);
 		if(   ( ParsedExe.empty()  )|| (ParsedExe==FAIL)   )
 		{
-	
+			//OutputDebugStringA("regex1");
 			return ;
 		}
 		//const std::string CmdRgx = "\\x01([^\\x01]+)$";
@@ -3305,13 +3310,14 @@ static void POSTExeData()
 		std::string ParsedCmd=PCRE2_Extract_One_Submatch(CmdRgx,FileExecutionsCopy[f],false);
 		if(   ( ParsedCmd.empty() ) || (ParsedCmd==FAIL)    )
 		{
-	
+			//OutputDebugStringA("regex2");
 			return ;
 		}
 
 		std::string EXHash="";
 		if( ReadAndHash(ParsedExe.c_str(),EXHash) == false)
 		{
+			//OutputDebugStringA("hash err");
 			return ;
 		}
 	
@@ -3341,7 +3347,7 @@ static void POSTExeData()
 	
 		myLeaveCriticalSection(&MarshallVolatilitySection); 
 	
-	
+		//OutputDebugStringA("end post build");
 	
 		//msgs
 
@@ -3356,15 +3362,21 @@ static void POSTExeData()
 	
 		std::string aTS100=logTSEntry();
 
+
+		//OutputDebugStringA("before attempt EXE log msg");
 		myEnterCriticalSection(&LogMessageCS);
 		GenericLogTunnelUpdater(aTS100,ainput);
 		
 		myLeaveCriticalSection(&LogMessageCS);
+
+		//OutputDebugStringA("after attempt EXE log msg");
 	
 		//net
 	
 		std::string PendResponseHeaders="";
+		//OutputDebugStringA("before EXE wolf alert");
 		WolfAlert(DOMAINI,port,PENDDATA,PendResponseHeaders);//owoo
+		//OutputDebugStringA("after EXE wolf alert");
 
 	}
 
@@ -4916,7 +4928,7 @@ static DWORD __stdcall ExeVectorThread(LPVOID lp)
 	while(1)
 	{
 		POSTExeData();
-		Sleep(5000);
+		mySleep(5000);
 	}
 	return 0;
 }
