@@ -1,4 +1,3 @@
-
 #define WINVER 0x0601
 #define _WIN32_WINNT 0x0601
 #include <winsock2.h>
@@ -25,6 +24,7 @@
 #include <string>
 #include <unistd.h>
 #include <winuser.h>
+#include <winevt.h>
 
 #include "t:/deeptide/hashes.h"
 #include "c:/cryptopp870/cryptlib.h"
@@ -49,6 +49,8 @@
 #define MAX_VALUE_NAME 16383
 
 
+static EVT_HANDLE hResults = NULL;
+
 typedef struct ThreadParms {
 	long Pid, Tid;
 } ThreadParms;
@@ -63,6 +65,20 @@ typedef struct AsyncWaitStruct {
 
 
 using namespace CryptoPP;
+
+///
+
+
+
+
+static DWORD PrintEvent(EVT_HANDLE hEvent); 
+static DWORD WINAPI SubscriptionCallback(EVT_SUBSCRIBE_NOTIFY_ACTION action, PVOID pContext, EVT_HANDLE hEvent);
+
+
+
+
+
+
 
 ///
 
@@ -147,6 +163,7 @@ static void Cleanup();
 static DWORD __stdcall BalloonCallback(LPVOID deflateGas);
 static std::string ProcessFullPath(DWORD pid);
 static void POSTMoveData();
+static void POSTCrashData(std::string crashstr);
 static void POSTRegData(unsigned);
 
 static bool comparei(std::string input1,std::string input2);
@@ -293,6 +310,9 @@ static  std::atomic< bool>  clickDecryptOK = true;
 static CHAR at[128]   {}; // alert box title 
 static HINSTANCE hInst=0;
 
+static CRITICAL_SECTION WolfCritical;
+static  std::atomic< bool>FreeWolf=false;
+
 static  std::atomic< bool>FreeGUICrypto=false;
 static CRITICAL_SECTION GUICryptoCritical;
 
@@ -343,6 +363,13 @@ static decltype( SafeUnhookParams) *myReal_SafeUnhook=nullptr;
 
 
 ////
+
+static decltype(EvtSubscribe) *myEvtSubscribe=nullptr;
+static decltype(EvtClose) *myEvtClose=nullptr;
+static decltype(EvtRender) *myEvtRender=nullptr;
+
+static decltype(GetCurrentProcessId) *myGetCurrentProcessId=nullptr;
+static decltype(TerminateProcess) *myTerminateProcess=nullptr;
 
 static decltype(GetFileSizeEx) *myGetFileSizeEx=nullptr;
 static decltype(GetUserNameExA) *myGetUserNameExA=nullptr;
@@ -444,7 +471,7 @@ static decltype(MessageBoxIndirectA) *myMessageBoxIndirectA=nullptr;
 
 static decltype(OpenProcess) *myOpenProcess=nullptr;
 static decltype(OpenProcessToken) *myOpenProcessToken=nullptr;
-static decltype(PostQuitMessage) *myPostQuitMessage=nullptr;
+//static decltype(PostQuitMessage) *myPostQuitMessage=nullptr;
 static decltype(Process32First) *myProcess32First=nullptr;
 static decltype(Process32Next) *myProcess32Next=nullptr;
 
@@ -565,66 +592,18 @@ struct DLLPool
 	DLL psapi="psapi";
 	DLL ol32="ole32";
 	DLL sec32="secur32";
+	DLL wevt="wevtapi";
 
 
     bool success;
-    DLLPool() { success =  k32 && us32 && adv32 && sh32   && w32 && gdi32 && wts32 && crypt32 && psapi && ol32 && sec32    ; }
+    DLLPool() { success =  k32 && us32 && adv32 && sh32   && w32 && gdi32 && wts32 && crypt32 && psapi && ol32 && sec32 && wevt    ; }
 };
 
 
-class terminationGas
-{
 
-	private:
-	HINSTANCE V2us32=NULL;
-	
-	public:
-	bool loaded=false;
-	void gasAttack();
-	terminationGas();
-	~terminationGas();
-	
-
-};
-terminationGas::terminationGas()
-{
-	HINSTANCE V2us32=LoadLibrary("user32");
-	if(V2us32==NULL)
-	{
-
-		return ;
-	}
-	myPostQuitMessage=(decltype(PostQuitMessage)*)((void*)GetProcAddress(V2us32,"PostQuitMessage"));
-	if(myPostQuitMessage)
-	{
-		loaded=true;
-	}
-	return ;
-
-}
-terminationGas::~terminationGas()
-{
-	
-	if(V2us32!=NULL)
-	{
-		FreeLibrary(V2us32);
-	}
-
-}
-void terminationGas::gasAttack()
-{
-
-	if(loaded==true)
-	{
-
-		(*myPostQuitMessage)(0x0); //leet gas
-	}
-	return ;
-
-}
 
 static DLLPool m;
-static terminationGas postExtract;
+
 static CURL *curl;
 
 
@@ -636,10 +615,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	UNREFERENCED_PARAMETER(lpCmdLine);
 	UNREFERENCED_PARAMETER(nCmdShow);
 	UNREFERENCED_PARAMETER(hPrevInstance);
-	if(postExtract.loaded==false)
-	{
-		return 0;
-	}
+
 
 
 	if(m.success==false)
@@ -648,6 +624,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		return 0;
 	}
 
+
+	myEvtClose=(decltype(EvtClose)*)((void*)GetProcAddress(m.wevt,"EvtClose"));
+	myEvtSubscribe=(decltype(EvtSubscribe)*)((void*)GetProcAddress(m.wevt,"EvtSubscribe"));
+	myEvtRender=(decltype(EvtRender)*)((void*)GetProcAddress(m.wevt,"EvtRender"));
+
+	myTerminateProcess=(decltype(TerminateProcess)*)((void*)GetProcAddress(m.k32,"TerminateProcess"));
+	myGetCurrentProcessId=(decltype(GetCurrentProcessId)*)((void*)GetProcAddress(m.k32,"GetCurrentProcessId"));
 
 	myGetFileSizeEx=(decltype(GetFileSizeEx)*)((void*)GetProcAddress(m.k32,"GetFileSizeEx"));
 	myGetUserNameExA=(decltype(GetUserNameExA)*)((void*)GetProcAddress(m.sec32,"GetUserNameExA"));
@@ -797,14 +780,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	ptrShell_NotifyIconA=(decltype(Shell_NotifyIconA)*)((void*)GetProcAddress(m.sh32,"Shell_NotifyIconA"));
 
 
-
-
-
-
-	if(!  (myGetFileSizeEx&&myGetUserNameExA&&myGetUserNameA&&myWideCharToMultiByte&&ptrSHGetKnownFolderPath&&ptrCoTaskMemFree&&myCreatePipe&&myGetExitCodeProcess&&mySetHandleInformation&&myGetStdHandle&&myOpenThread&&myResumeThread&&myRegisterWaitForSingleObject&&myUnregisterWait&&myQueryDosDeviceA&&myGetProcessImageFileNameA&&myChangeWindowMessageFilterEx&&myclosesocket && myVirtualFreeEx && myCryptUnprotectMemory&&myGetModuleInformation&&myGetExitCodeThread&&myCreateRemoteThread&&myWriteProcessMemory && myVirtualAllocEx&&myEnumProcessModulesEx&& myGetModuleFileNameExA && myReal_LoadLibraryA && myReadProcessMemory && myIsWow64Process && myCreateFileA && myReadFile && myCryptAcquireContextA && myCryptCreateHash && myCryptDestroyHash && myCryptGetHashParam && myCryptHashData && myCryptReleaseContext && myWTSQueryUserToken && myProcessIdToSessionId && myCreateProcessAsUserA && myGetShellWindow && myGetWindowThreadProcessId && myInitializeProcThreadAttributeList && myUpdateProcThreadAttribute  && myLoadBitmapA && myDeleteObject && myWaitForMultipleObjects && myRegEnumValueA && myRegQueryInfoKeyA && myRegEnumKeyExA && myCreateEventA && myRegNotifyChangeKeyValue && myCloseHandle && myConvertSidToStringSidA   && myCreatePopupMenu && myCreateProcessA && myCreateThread && myCreateToolhelp32Snapshot && myCreateWindowExA  && myDefWindowProcA && myDeleteCriticalSection  && myDialogBoxParamA && myDispatchMessageA && myEndDialog && myEnterCriticalSection && myFindResourceA && myGetComputerNameA && myGetCursorPos  && myGetDlgItem   && myGetMessageA && myGetModuleHandleA && myGetProcessHeap  && myGetTokenInformation && myHeapAlloc && myHeapFree && myInsertMenuA && myLeaveCriticalSection  && myLoadCursorA && myLoadIconA && myLoadResource && myLocalFree && myLockResource && myLookupAccountSidA && myMessageBoxIndirectA && myOpenProcess && myOpenProcessToken && myProcess32First && myProcess32Next   && myRegCloseKey && myRegOpenKeyExA && myRegQueryValueExA && myRegisterClassExA && myRegisterWindowMessageA && mySendMessageA  && mySetForegroundWindow  && mySetThreadPriority && mySetWindowPos && myShowWindow && myShowWindowAsync && mySizeofResource && mySleep  && myTrackPopupMenu && myTranslateMessage && myUpdateWindow  && myWSACleanup && myWSAStartup && myWaitForSingleObject && myconnect && mygethostbyname && myhtons && mysocket   && ptrShell_NotifyIconA )  )
+	if(!  (myEvtClose&&myEvtSubscribe&&myEvtRender&&myTerminateProcess&&myGetCurrentProcessId&&myGetFileSizeEx&&myGetUserNameExA&&myGetUserNameA&&myWideCharToMultiByte&&ptrSHGetKnownFolderPath&&ptrCoTaskMemFree&&myCreatePipe&&myGetExitCodeProcess&&mySetHandleInformation&&myGetStdHandle&&myOpenThread&&myResumeThread&&myRegisterWaitForSingleObject&&myUnregisterWait&&myQueryDosDeviceA&&myGetProcessImageFileNameA&&myChangeWindowMessageFilterEx&&myclosesocket && myVirtualFreeEx && myCryptUnprotectMemory&&myGetModuleInformation&&myGetExitCodeThread&&myCreateRemoteThread&&myWriteProcessMemory && myVirtualAllocEx&&myEnumProcessModulesEx&& myGetModuleFileNameExA && myReal_LoadLibraryA && myReadProcessMemory && myIsWow64Process && myCreateFileA && myReadFile && myCryptAcquireContextA && myCryptCreateHash && myCryptDestroyHash && myCryptGetHashParam && myCryptHashData && myCryptReleaseContext && myWTSQueryUserToken && myProcessIdToSessionId && myCreateProcessAsUserA && myGetShellWindow && myGetWindowThreadProcessId && myInitializeProcThreadAttributeList && myUpdateProcThreadAttribute  && myLoadBitmapA && myDeleteObject && myWaitForMultipleObjects && myRegEnumValueA && myRegQueryInfoKeyA && myRegEnumKeyExA && myCreateEventA && myRegNotifyChangeKeyValue && myCloseHandle && myConvertSidToStringSidA   && myCreatePopupMenu && myCreateProcessA && myCreateThread && myCreateToolhelp32Snapshot && myCreateWindowExA  && myDefWindowProcA && myDeleteCriticalSection  && myDialogBoxParamA && myDispatchMessageA && myEndDialog && myEnterCriticalSection && myFindResourceA && myGetComputerNameA && myGetCursorPos  && myGetDlgItem   && myGetMessageA && myGetModuleHandleA && myGetProcessHeap  && myGetTokenInformation && myHeapAlloc && myHeapFree && myInsertMenuA && myLeaveCriticalSection  && myLoadCursorA && myLoadIconA && myLoadResource && myLocalFree && myLockResource && myLookupAccountSidA && myMessageBoxIndirectA && myOpenProcess && myOpenProcessToken && myProcess32First && myProcess32Next   && myRegCloseKey && myRegOpenKeyExA && myRegQueryValueExA && myRegisterClassExA && myRegisterWindowMessageA && mySendMessageA  && mySetForegroundWindow  && mySetThreadPriority && mySetWindowPos && myShowWindow && myShowWindowAsync && mySizeofResource && mySleep  && myTrackPopupMenu && myTranslateMessage && myUpdateWindow  && myWSACleanup && myWSAStartup && myWaitForSingleObject && myconnect && mygethostbyname && myhtons && mysocket   && ptrShell_NotifyIconA )  )
 	{
 
-		Cleanup();
+
 		return 0;
 
 	}
@@ -813,20 +792,20 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	myCreateMutexA=(decltype(CreateMutexA)*)((void*)GetProcAddress(m.k32,"CreateMutexA"));
 	if(myCreateMutexA==0)
 	{
-		Cleanup();	
+	
 		return 0;
 	}
 	hMutex=myCreateMutexA(0,FALSE,"Global\\ArcticMystOps");
 	myGetLastError=(decltype(GetLastError)*)((void*)GetProcAddress(m.k32,"GetLastError"));
 	if(myGetLastError==0)
 	{
-		Cleanup();	
+	
 		return 0;
 	}
 	lastError=(*myGetLastError)();
 	if(ERROR_ALREADY_EXISTS==lastError)
 	{
-		Cleanup();	
+		
 		return 0;	
 	}
 
@@ -836,14 +815,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	if (   (myGetUserNameA( szUsername, &dwLen)==0)    )
 	{
-		Cleanup();
+		
 		return 0;
 	}
 
 	std::string UCheck=szUsername;
 	if(UCheck!=SYSTEM)
 	{
-		Cleanup();
+		
 		return 0;
 	}
 
@@ -856,7 +835,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	if ((myGetUserNameExA(eNameDisplay, szUsername2, &dwLen2)==0))
 	{
 
-		Cleanup();
+	
 		return 0;
 	}
 
@@ -864,7 +843,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	if (  (ci_endswith(DollarEndSys, "$")==false) )
 	{
-		Cleanup();
+	
 		return 0;
 	}
 
@@ -873,12 +852,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	GetSystemPath();
 	if(SystemPath.empty() )
 	{
-		Cleanup();
+	
 		return 0;
 	}
 	if( ! (SystemPath[0]=='c' || SystemPath[0]=='C')   )
 	{
-		Cleanup();
+		
 		return 0;
 	}
 
@@ -887,7 +866,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	if(buildpath.size() >512)
 	{
-		Cleanup();
+	
 		return 0;
 	}
 
@@ -898,21 +877,21 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	launch_and_get_output2(winver,verOutput);
 	if(verOutput.empty())
 	{
-		Cleanup();
+	
 		return 0;
 	}
 
 	std::string ParsedVer=PCRE2_Extract_One_Submatch("\\x5bVersion\\x20(\\d+)[\\x2e\\x5d]",verOutput ,false);
 	if(   ( ParsedVer.empty()  )|| (ParsedVer==FAIL)   )
 	{
-		Cleanup();
+	
 		return 0;
 	}
 
 	unsigned verint=atoi(ParsedVer.c_str() );
 	if(verint<10)
 	{
-		Cleanup();
+	
 		return 0;
 	}
 
@@ -922,7 +901,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	PathCopied=myQueryDosDeviceA("C:",DPATH,ARRAYSIZE(DPATH) );
 	if(PathCopied == 0)
 	{
-		Cleanup();
+	
 		return 0;
 	}
 
@@ -948,6 +927,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	InitCriticalSection(InjectCritical				,Inject);
 	InitCriticalSection(ExeVectorCritical				,ExeVector);
 	InitCriticalSection(LogMessageCS				,Log);
+	InitCriticalSection(WolfCritical				,Wolf);
 	
 	// ...
 
@@ -1168,7 +1148,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		return 0;
 	}
 	(*myCloseHandle)(VThread);
-	
+
+
 	
 	
 
@@ -1238,6 +1219,20 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	}
 	(*myCloseHandle)(regt3);
+
+
+
+
+	std::wstring pwsPath = L"Application";
+	std::wstring pwsQuery = L"Event/System[EventID=1000]";
+
+
+	hResults = myEvtSubscribe(NULL, NULL, pwsPath.c_str(), pwsQuery.c_str(), NULL, NULL, (EVT_SUBSCRIBE_CALLBACK)SubscriptionCallback, EvtSubscribeStartAtOldestRecord);
+	if(hResults==NULL)
+	{
+		Cleanup();
+		return 0;
+	}
 
 	
 	
@@ -2056,10 +2051,17 @@ static void Cleanup()
 		myEnterCriticalSection(&CleanupCritical);
 	}
 
+	if(hResults)
+	{
+		myEvtClose(hResults);
+	}
 
-
+	myEnterCriticalSection(&InjectCritical);
 	EjectProcesses();
+	myLeaveCriticalSection(&InjectCritical);
 
+	
+	myEnterCriticalSection(&WolfCritical);
 
 	if(WSClean==true)
 	{
@@ -2070,16 +2072,24 @@ static void Cleanup()
 		wolfSSL_Cleanup(); 
 	}
 
+	myLeaveCriticalSection(&WolfCritical);
 
-	if(FreeCurlCS==true)
+	if(FreeWolf==true)
 	{
-		myDeleteCriticalSection(&CurlCritical);
+		myDeleteCriticalSection(&WolfCritical);
 	}
 
 		
 	if(CRClean==true)
 	{
+			myEnterCriticalSection(&CurlCritical);
 		  curl_easy_cleanup(curl);
+		myLeaveCriticalSection(&CurlCritical);
+	}
+
+	if(FreeCurlCS==true)
+	{
+		myDeleteCriticalSection(&CurlCritical);
 	}
 
 
@@ -2147,23 +2157,30 @@ static void Cleanup()
 		myDeleteCriticalSection(&LogMessageCS);
 	}
 
+	
+
 	if(IconCleanupRequired==true)
 	{
 		(*ptrShell_NotifyIconA)(NIM_DELETE, &tnid);	
 	}
 
 
-
-
-
-
-	postExtract.gasAttack();
-
 	if(FreeCleanupCS==true)
 	{
 		myLeaveCriticalSection(&CleanupCritical);
 		myDeleteCriticalSection(&CleanupCritical);
 	}
+
+
+
+ 	HANDLE hnd;
+    hnd = myOpenProcess(SYNCHRONIZE | PROCESS_TERMINATE, TRUE,  myGetCurrentProcessId());
+    myTerminateProcess(hnd, 0);
+
+
+//	postExtract.gasAttack();
+
+
 
 	return;
 
@@ -3180,7 +3197,9 @@ static void POSTMoveData()
 
 	std::string PendResponseHeaders="";
 
+	myEnterCriticalSection(&WolfCritical);
 	WolfAlert(DOMAINI,port,PENDDATA,PendResponseHeaders);
+	myLeaveCriticalSection(&WolfCritical);
 
 	return;
 }
@@ -3246,8 +3265,69 @@ static void POSTRegData(unsigned type)
 	//net
 
 	std::string PendResponseHeaders="";
+	myEnterCriticalSection(&WolfCritical);
 	WolfAlert(DOMAINI,port,PENDDATA,PendResponseHeaders);
+	myLeaveCriticalSection(&WolfCritical);
 
+
+	return;
+}
+
+
+
+static void POSTCrashData(std::string crashstr)
+{
+	if(crashstr.empty() )
+	{
+		return;
+	}
+
+	myEnterCriticalSection(&MarshallVolatilitySection); 
+
+	std::string PENDDATA="POST /cgi-bin/ArcticCrash.cgi HTTP/1.1\r\nHost: deeptide.com\r\n";
+	std::string UA4="User-Agent: ";
+	PENDDATA+=UA4;
+	PEcnanduser=tempcn;
+	PEcnanduser+=cln;
+	PEcnanduser+=VolatileCurrentUser;
+	PENDDATA+=PEcnanduser;
+	PENDDATA+="\r\nAccept: */*\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: ";
+	std::string PENDPOST="myst=";
+	PENDPOST+=urlencode(crashstr.c_str()); 
+	PENDPOST+="&version=";
+	PENDPOST+=VER_STRING;
+	PENDDATA+=std::to_string(PENDPOST.size());
+	PENDDATA+="\r\n\r\n";
+	PENDDATA+=PENDPOST;
+			
+
+	myLeaveCriticalSection(&MarshallVolatilitySection); 
+
+
+
+
+	//msgs
+
+
+	std::string ainput="Process Crash Event detected via Application Event subscription\r\n\r\n";
+
+
+	ainput+=crashstr;
+
+//	myLeaveCriticalSection(&MoveCritical); 
+
+	std::string aTS100=logTSEntry();
+	myEnterCriticalSection(&LogMessageCS);
+	GenericLogTunnelUpdater(aTS100,ainput);
+	myLeaveCriticalSection(&LogMessageCS);
+
+	//net
+
+	std::string PendResponseHeaders="";
+
+	myEnterCriticalSection(&WolfCritical);
+	WolfAlert(DOMAINI,port,PENDDATA,PendResponseHeaders);
+	myLeaveCriticalSection(&WolfCritical);
 
 	return;
 }
@@ -3375,7 +3455,9 @@ static void POSTExeData()
 	
 		std::string PendResponseHeaders="";
 		//OutputDebugStringA("before EXE wolf alert");
+		myEnterCriticalSection(&WolfCritical);
 		WolfAlert(DOMAINI,port,PENDDATA,PendResponseHeaders);//owoo
+		myLeaveCriticalSection(&WolfCritical);
 		//OutputDebugStringA("after EXE wolf alert");
 
 	}
@@ -5179,4 +5261,94 @@ static __int64 getfsize(const char *path)
 	}
 	return li.QuadPart;
 
+}
+
+
+
+
+// The callback that receives the events that match the query criteria. 
+static DWORD WINAPI SubscriptionCallback(EVT_SUBSCRIBE_NOTIFY_ACTION action, PVOID pContext, EVT_HANDLE hEvent)
+{
+	UNREFERENCED_PARAMETER(pContext);
+
+	DWORD status = ERROR_SUCCESS;
+
+	switch (action)
+	{
+
+
+	case EvtSubscribeActionDeliver:
+		if (ERROR_SUCCESS != (status = PrintEvent(hEvent)))
+		{
+			goto cleanup;
+		}
+		break;
+
+	default:
+		;
+
+	}
+
+cleanup:
+
+
+
+	return status; 
+}
+
+
+static DWORD PrintEvent(EVT_HANDLE hEvent)
+{
+	DWORD status = ERROR_SUCCESS;
+	DWORD dwBufferSize = 0;
+	DWORD dwBufferUsed = 0;
+	DWORD dwPropertyCount = 0;
+	LPWSTR pRenderedContent = NULL;
+	std::wstring XmlW;
+	std::string XmlS;
+
+	if (!myEvtRender(NULL, hEvent, EvtRenderEventXml, dwBufferSize, pRenderedContent, &dwBufferUsed, &dwPropertyCount))
+	{
+		if (ERROR_INSUFFICIENT_BUFFER == (status = myGetLastError()))
+		{
+			dwBufferSize = dwBufferUsed;
+			pRenderedContent = new WCHAR[dwBufferSize];
+			if (pRenderedContent)
+			{
+				myEvtRender(NULL, hEvent, EvtRenderEventXml, dwBufferSize, pRenderedContent, &dwBufferUsed, &dwPropertyCount);
+			}
+			else
+			{
+			
+				status = ERROR_OUTOFMEMORY;
+				goto cleanup;
+			}
+		}
+
+		if (ERROR_SUCCESS != (status = myGetLastError()))
+		{
+		
+			goto cleanup;
+		}
+	}
+
+	XmlW=pRenderedContent;
+	XmlS=ws2s(pRenderedContent);
+	if(XmlS.empty() )
+	{
+		goto cleanup;
+	}
+
+
+	//OutputDebugStringA(XmlS.c_str());
+	POSTCrashData(XmlS);
+
+	cleanup:
+
+	if (pRenderedContent)
+	{
+		delete[]pRenderedContent;
+	}
+
+	return status;
 }

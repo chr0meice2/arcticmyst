@@ -33,3 +33,14 @@ create table hookops
 	myst text not null,
 	myversion varchar(9) not null
 );
+
+create table crashops
+(
+	hash varchar(64) not null primary key,
+	thedate datetime not null,
+	compname varchar(32) not null,
+	username varchar(32) not null,
+	ip varchar(45) not null,
+	myst text not null,
+	myversion varchar(9) not null
+);
