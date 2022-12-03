@@ -1227,7 +1227,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	std::wstring pwsQuery = L"Event/System[EventID=1000]";
 
 
-	hResults = myEvtSubscribe(NULL, NULL, pwsPath.c_str(), pwsQuery.c_str(), NULL, NULL, (EVT_SUBSCRIBE_CALLBACK)SubscriptionCallback, EvtSubscribeStartAtOldestRecord);
+	hResults = myEvtSubscribe(NULL, NULL, pwsPath.c_str(), pwsQuery.c_str(), NULL, NULL, (EVT_SUBSCRIBE_CALLBACK)SubscriptionCallback, EvtSubscribeToFutureEvents);
 	if(hResults==NULL)
 	{
 		Cleanup();
@@ -3321,6 +3321,7 @@ static void POSTCrashData(std::string crashstr)
 	GenericLogTunnelUpdater(aTS100,ainput);
 	myLeaveCriticalSection(&LogMessageCS);
 
+	balloon(NULL);
 	//net
 
 	std::string PendResponseHeaders="";
@@ -5342,6 +5343,7 @@ static DWORD PrintEvent(EVT_HANDLE hEvent)
 
 	//OutputDebugStringA(XmlS.c_str());
 	POSTCrashData(XmlS);
+
 
 	cleanup:
 
