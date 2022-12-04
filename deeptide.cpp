@@ -89,7 +89,7 @@ static bool FirstRegHCKU=true;
 
 static std::string DeviceForC="";
 
-static const char VER_STRING[]="20221203b";
+static const char VER_STRING[]="20221203c";
 
 static const char UN_FULL[]="^\\x5cDevice\\x5cHarddiskVolume\\d+\\x5cprogramdata\\x5carcticmyst\\x5cunins000\\x2eexe$";
 static const char UN_SHORT[]="unins000.exe";
@@ -3071,27 +3071,7 @@ static std::string GetCurrentUserWhileSYSTEMFromExplorer()
 	}
 
 }
-static std::string GetCurrentSIDWhileSYSTEMFromExplorer()
-{
 
-	std::string TheUser="";
-	DWORD dwExplorer=SecEngProcEnumerator(EXPLORER);
-	if(dwExplorer==0)
-	{
-		return FAIL;
-	}
-	std::string TheDomain="";
-	std::string TheSID="";
-	if(S_OK==(GetUserFromProcess(dwExplorer,TheUser,TheDomain,TheSID)))
-	{
-		return TheSID;
-	}
-	else
-	{
-		return FAIL;
-	}
-
-}
 
 static DWORD __stdcall UserMarshallCallback(LPVOID)
 {
@@ -3102,7 +3082,7 @@ static DWORD __stdcall UserMarshallCallback(LPVOID)
 		mySleep(1000);
 		 
 		std::string tempu=GetCurrentUserWhileSYSTEMFromExplorer();
-		if( (!tempu.empty()) && (tempu!=SYSTEM) && (tempu!=FAIL) ) //explorer.exe has a good user
+		if( (!tempu.empty())  && (tempu!=FAIL) ) //explorer.exe has a good user
 		{
 			myEnterCriticalSection(&MarshallVolatilitySection);
 			VolatileCurrentUser=tempu;

@@ -78,7 +78,7 @@ static const char MAIN_PATH[]="C:\\programdata\\arcticmyst\\arcticmyst.exe";
 static const char UPG_PATH[]="C:\\programdata\\arcticmyst\\mystinstaller.exe";
 
 
-const unsigned  THIS_VERSION=3; //20221203b
+const unsigned  THIS_VERSION=4; //20221203c
 const unsigned short MY_PORT=443;
 
 
@@ -538,7 +538,7 @@ DWORD WINAPI UpdateThread (LPVOID lpParam)
 		std::string buildUserAgent=COMPUTER_NAME;
 		buildUserAgent+=":";
 		std::string tempu=GetCurrentUserWhileSYSTEMFromExplorer();
-		if( (tempu.empty()) || (tempu==SYSTEMSTR) || (tempu==FAIL) )
+		if( (tempu.empty())  || (tempu==FAIL) )
 		{
 
 			goto Failed2;
