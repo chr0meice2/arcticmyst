@@ -10,4 +10,4 @@ my $inputs=new CGI;
 
 my $THEUA=$ENV{'HTTP_USER_AGENT'};
 
-print "|2:/hosted/arcticsetup.exe:913bd0b959643c0fdfaf042120211ff59e08211606824d83c24204e58d53a444|";
+print "|3:/hosted/arcticsetup.exe:9390b6f700b66426abd8a906fd6cda1e1737b7cc20b87154459f730b084964c9|";
