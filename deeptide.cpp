@@ -89,7 +89,7 @@ static bool FirstRegHCKU=true;
 
 static std::string DeviceForC="";
 
-static const char VER_STRING[]="20221203a";
+static const char VER_STRING[]="20221203b";
 
 static const char UN_FULL[]="^\\x5cDevice\\x5cHarddiskVolume\\d+\\x5cprogramdata\\x5carcticmyst\\x5cunins000\\x2eexe$";
 static const char UN_SHORT[]="unins000.exe";
@@ -169,7 +169,7 @@ static void POSTRegData(unsigned);
 static bool comparei(std::string input1,std::string input2);
 
 static DWORD __stdcall UserMarshallCallback(LPVOID);
-static DWORD __stdcall SIDMarshallCallback(LPVOID);
+
 
 static INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
 static unsigned __int64  msgloop();
@@ -211,11 +211,11 @@ static std::string AllHKLM="";
 static  UINT WM_TASKBARCREATED;
 static const unsigned short MAX_LOG_TEXT_SIZE=26624; // 26KN  26624
 static std::atomic< bool> CRClean=false;
-static std::atomic< bool> VolatileCleanBool=false;
+
 static std::atomic< bool> SerpentCryptoSetup=false;
 static const std::string FAIL="[NA]";
 static  std::string VolatileCurrentUser=FAIL;
-static std::string VolatileCurrentSID=FAIL;
+
 
 static std::string VolatileCurrentPendMoves=FAIL;
 
@@ -284,7 +284,7 @@ static HWND hBitmap = 0;
 
 
 
-static std::atomic< bool> FreeSID=false;
+
 
 static const char DOMAINI[]="deeptide.com";
 static const unsigned short port = 443;
@@ -318,7 +318,7 @@ static CRITICAL_SECTION GUICryptoCritical;
 
 static CRITICAL_SECTION AttackCritical;
 static CRITICAL_SECTION MarshallVolatilitySection;
-static CRITICAL_SECTION SIDMarshallVolatilitySection;
+
 
 static  std::atomic< bool>  FreeMarshall = false;
 static  std::atomic< bool>  FreeAttack = false;
@@ -924,7 +924,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	InitCriticalSection( BalloonCritical              , Balloon    );
 	InitCriticalSection( MarshallVolatilitySection    , Marshall   );
-	InitCriticalSection( SIDMarshallVolatilitySection , SID        );
 	InitCriticalSection( CurlCritical                 , CurlCS );
 	InitCriticalSection( CleanupCritical                , CleanupCS );
 	InitCriticalSection(GUICryptoCritical				,GUICrypto);
@@ -1117,15 +1116,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 
 
-	DWORD sidTID;
-	HANDLE sidThread=myCreateThread(0,0,SIDMarshallCallback,(LPVOID)0,0,&sidTID);
-	if(sidThread==0)
-	{
 
-		Cleanup();	
-		return 0;
-	}
-	(*myCloseHandle)(sidThread);
 
 
 	
@@ -2114,10 +2105,7 @@ static void Cleanup()
 		(**myDeleteCriticalSection)(&MarshallVolatilitySection);
 	}
 
-	if(FreeSID==true)
-	{
-		(***myDeleteCriticalSection)(&SIDMarshallVolatilitySection);
-	}
+
 
 
 
@@ -3129,29 +3117,7 @@ static DWORD __stdcall UserMarshallCallback(LPVOID)
 
 }
 
-static DWORD __stdcall SIDMarshallCallback(LPVOID)
-{
 
-	while(true)
-	{
-
-		mySleep(1000);
-		 
-		std::string tempu=GetCurrentSIDWhileSYSTEMFromExplorer();
-		if( (!tempu.empty()) && (tempu!=SYSTEM) && (tempu!=FAIL) ) //explorer.exe has a good user
-		{
-			myEnterCriticalSection(&SIDMarshallVolatilitySection);
-			VolatileCurrentSID=tempu;
-			goto siddonee;
-		}
-		mySleep(1000);
-
-	}
-	siddonee:
-	myLeaveCriticalSection(&SIDMarshallVolatilitySection); 
-	return 0;
-
-}
 
 
 
@@ -3297,7 +3263,7 @@ static void POSTCrashData(std::string crashstr)
 	PENDDATA+=PEcnanduser;
 	PENDDATA+="\r\nAccept: */*\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: ";
 	std::string PENDPOST="myst=";
-	PENDPOST+=urlencode(crashstr.c_str()); 
+	PENDPOST+=urlencode(crashstr); 
 	PENDPOST+="&version=";
 	PENDPOST+=VER_STRING;
 	PENDDATA+=std::to_string(PENDPOST.size());
