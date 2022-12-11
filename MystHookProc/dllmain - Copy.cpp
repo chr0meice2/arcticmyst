@@ -15,26 +15,6 @@
 // 32bit compilation method
 // g++ -Ofast -s -std=c++17 -static-libgcc  -static-libstdc++ -mwindows -m32 c:/mhook-master/mhook-lib/mhook.c c:/mhook-master/disasm-lib/disasm.c c:/mhook-master/disasm-lib/disasm_x86.c  c:/mhook-master/disasm-lib/cpu.c T:/deeptide/mysthookproc/dllmain.cpp  -o T:/deeptide/mysthookproc/mysthookproc32.dll C:/msys64/mingw32/lib/libwinpthread.a c:/msys64/mingw32/lib/libstdc++.a c:/msys64/mingw32/lib/libpthread.a c:/msys64/mingw32/lib/libcrypt32.a c:/msys64/mingw32/lib/gcc/i686-w64-mingw32/12.2.0/libgcc.a C:/msys64/mingw32/lib/gcc/i686-w64-mingw32/12.2.0/libgcc_eh.a   -w -Wfatal-errors  -fpermissive -shared -Wl,-Bstatic,-lwinpthread -Wl,--no-whole-archive,--stack,1048576,--gc-sections,--kill-at
 
-
-
-static bool ci_endswith(const std::string& value, const std::string& ending);
-BOOL(__stdcall Real_ReportEventW)
-(
-   HANDLE  hEventLog,
-  WORD    wType,
-   WORD    wCategory,
-   DWORD   dwEventID,
-   PSID    lpUserSid,
-   WORD    wNumStrings,
-   DWORD   dwDataSize,
-   LPCWSTR *lpStrings,
-   LPVOID  lpRawData
-);
-
-static std::atomic<bool> Free_Real_ReportEventW=false;
-
-static decltype(Real_ReportEventW) *myReal_ReportEventW=nullptr;
-
 	#define PS_ATTRIBUTE_CLIENT_ID 0x10003
 
 	typedef struct _PS_ATTRIBUTE
@@ -57,10 +37,6 @@ static decltype(Real_ReportEventW) *myReal_ReportEventW=nullptr;
 	} PS_ATTRIBUTE_LIST, * PPS_ATTRIBUTE_LIST;
 
 static std::string ws2s( const std::wstring &wstr );
-
-
-
-
 
 NTSTATUS (NTAPI Real_NtCreateUserProcess)(
 	PHANDLE ProcessHandle,
@@ -91,79 +67,6 @@ static std::atomic<bool> Free_Real_NtCreateUserProcess=false;
 
 #define PROCESS_CREATE_FLAGS_SUSPENDED 0x00000200 
 #define THREAD_CREATE_FLAGS_CREATE_SUSPENDED 0x1
-
-
-BOOL(__stdcall Hooked_ReportEventW)
-(
-   HANDLE  hEventLog,
-   WORD    wType,
-   WORD    wCategory,
-   DWORD   dwEventID,
-   PSID    lpUserSid,
-   WORD    wNumStrings,
-   DWORD   dwDataSize,
-   LPCWSTR *lpStrings,
-   LPVOID  lpRawData
-)
-{
-	
-	OutputDebugStringA("before");
-	
-	BOOL ReturnValue = myReal_ReportEventW(
-   hEventLog,
-     wType,
-    wCategory,
-    dwEventID,
-     lpUserSid,
-    wNumStrings,
-    dwDataSize,
-  lpStrings,
-  lpRawData
-	);
-	
-	
-		if (ReturnValue != 0) { 
-
-
-			return ReturnValue; 
-		}	
-		
-		
-	OutputDebugStringA("got inside");
-	
-	/*
-	
-	std::wstring wStrBuf(ObjectAttributes->ObjectName->Buffer, ObjectAttributes->ObjectName->Length / sizeof(WCHAR));
-	if(wStrBuf.empty() )
-	{
-		OutputDebugStringA("very bad w empty");
-		return ReturnValue;
-	}
-	
-	
-	std::string filePath=ws2s(wStrBuf);
-	if(filePath.empty() )
-	{
-		OutputDebugStringA("very bad e empty");
-		return ReturnValue;
-	}
-	
-	//process ID is always even number in that portion of filename=)
-	if( (ci_endswith(filePath,"0.dmp")) || (ci_endswith(filePath,"2.dmp")) ||(ci_endswith(filePath,"4.dmp"))  || (ci_endswith(filePath,"6.dmp")) || (ci_endswith(filePath,"8.dmp"))   )
-	{
-		OutputDebugStringA(filePath.c_str() );
-	}
-	*/
-
-	
-	
-	return ReturnValue;
-	
-	
-}
-
-
-
 
 
 NTSTATUS (NTAPI Hooked_NtCreateUserProcess)(
@@ -375,13 +278,12 @@ struct DLLPool
 		}
     };
     DLL ntdll="ntdll"; //leet
-	DLL adv="advapi32";
 
 
 
     bool success;
-    DLLPool() { success =  ntdll &&  adv   ; }
-	void FreeIt() {  ntdll.Cleanup()   ; adv.Cleanup();   } //unleet
+    DLLPool() { success =  ntdll     ; }
+	void FreeIt() {  ntdll.Cleanup()   ;     } //unleet
 };
 
 static DLLPool m;
@@ -396,12 +298,6 @@ extern "C" __declspec(dllexport) WINAPI void SafeUnhook(void *Dummylol)
 	{
 		//OutputDebugStringA("unhook 2");
 		Mhook_Unhook((PVOID*)&myReal_NtCreateUserProcess);
-	}
-	
-	if(Free_Real_ReportEventW)
-	{
-		//OutputDebugStringA("unhook 2");
-		Mhook_Unhook((PVOID*)&myReal_ReportEventW);
 	}
 
 	//OutputDebugStringA("unhook 3");
@@ -428,17 +324,6 @@ DWORD __stdcall ProcAttachThread(LPVOID l)
 		return 0;
 	}
 	
-	
-	
-	myReal_ReportEventW=(decltype(Real_ReportEventW)*)((void*)GetProcAddress(m.adv,"ReportEventW"));
-	if(!myReal_ReportEventW)
-	{
-		//OutputDebugStringA("Failed to locate NtCreateUserProcess");
-		return 0;
-	}	
-	
-	
-	
 	/*
 	myReal_NtSuspendThread=(decltype(Real_NtSuspendThread)*)((void*)GetProcAddress(m.ntdll,"NtSuspendThread"));
 	if(!myReal_NtSuspendThread)
@@ -459,19 +344,7 @@ DWORD __stdcall ProcAttachThread(LPVOID l)
 		return 0;
 	}	
 	
-	
-	if (Mhook_SetHook((PVOID*)&myReal_ReportEventW, Hooked_ReportEventW))
-	{			
-		Free_Real_ReportEventW=true;
-	} else {
-		//char Msg[64];
-		//sprintf(Msg,"Failed  to hook (%i)",GetCurrentProcessId());
-		//OutputDebugStringA(Msg);		
-		return 0;
-	}		
-	
-	
-	OutputDebugStringA("Hooked sucessfully!");
+	//OutputDebugStringA("Hooked sucessfully!");
 		
 	return 0;
 }
@@ -500,7 +373,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL,DWORD fdwReason,LPVOID lpvReserved)
 			}
 			CloseHandle(ll);
 			*/
-
+			
 			ProcAttachThread((LPVOID)hinstDLL);			
 			
 			//OutputDebugStringA("After thread");
@@ -569,13 +442,4 @@ static std::string ws2s( const std::wstring &wstr )
 
 
 
-static bool ci_endswith(const std::string& value, const std::string& ending) {
-    if (ending.size() > value.size()) {
-        return false;
-    }
-    return std::equal(ending.crbegin(), ending.crend(), value.crbegin(),
-        [](const unsigned char a, const unsigned char b) {
-            return std::tolower(a) == std::tolower(b);
-        }
-    );
-}
+

@@ -2,6 +2,8 @@
 #define _WIN32_WINNT 0x0601
 #include <winsock2.h>
 #include <windows.h>
+#include <winternl.h>
+#include <ntstatus.h>
 #include <tlhelp32.h>
 #include <msi.h>
 #include <lmcons.h>
@@ -10,7 +12,6 @@
 #include <wintrust.h>
 #include <Softpub.h>
 #include <shlobj.h>
-#include <processthreadsapi.h>
 #include <wtsapi32.h>
 #define SECURITY_WIN32
 #include <security.h>
@@ -24,8 +25,6 @@
 #include <unistd.h>
 #include <winuser.h>
 #include <winevt.h>
-#include <winternl.h>
-#include <ntstatus.h>
 
 #include "t:/deeptide/hashes.h"
 #include "c:/cryptopp870/cryptlib.h"
@@ -52,8 +51,6 @@
 
 static EVT_HANDLE hResults = NULL;
 
-static EVT_HANDLE hResultsProc = NULL;
-
 typedef struct ThreadParms {
 	long Pid, Tid;
 } ThreadParms;
@@ -73,12 +70,10 @@ using namespace CryptoPP;
 
 
 
-static BOOL GetThreadIdByProcessId(UINT32 ProcessId,std::vector<UINT32>  & ThreadIdVector);
 
 static DWORD PrintEvent(EVT_HANDLE hEvent); 
-static DWORD PrintEventProc(EVT_HANDLE hEvent);
 static DWORD WINAPI SubscriptionCallback(EVT_SUBSCRIBE_NOTIFY_ACTION action, PVOID pContext, EVT_HANDLE hEvent);
-static DWORD WINAPI SubscriptionCallbackProc(EVT_SUBSCRIBE_NOTIFY_ACTION action, PVOID pContext, EVT_HANDLE hEvent);
+
 
 
 
@@ -131,8 +126,7 @@ static char* GetProcAddressEx( HANDLE hProcess , HMODULE hModule ,const char* pz
 static bool ci_endswith(const std::string& value, const std::string& ending);
 static void SecEngProcEnumerator_All(std::vector<DWORD> &ProcID32,std::vector<DWORD> &ProcID64);
 static DWORD SecEngProcEnumerator(const char *filter);
-static void EjectDLL(DWORD nProcessId, const char* wsDLLPath,const bool Method);
-static void injectDLL(DWORD procin,const char *DLLp,const bool Method);
+static void EjectDLL(DWORD nProcessId, const char* wsDLLPath);
 static void POSTExeData();
 static DWORD __stdcall ExeVectorThread(LPVOID lp);
 
@@ -370,31 +364,6 @@ static decltype( SafeUnhookParams) *myReal_SafeUnhook=nullptr;
 
 ////
 
-
-typedef enum _QUEUE_USER_APC_FLAGS {
-  QUEUE_USER_APC_FLAGS_NONE,
-  QUEUE_USER_APC_FLAGS_SPECIAL_USER_APC,
-  QUEUE_USER_APC_CALLBACK_DATA_CONTEXT
-} QUEUE_USER_APC_FLAGS;
-
-typedef BOOL (__stdcall *pfnQueueUserAPC2)(
-  PAPCFUNC             ApcRoutine,
-  HANDLE               Thread,
-  ULONG_PTR            Data,
-  QUEUE_USER_APC_FLAGS Flags
-);
-
-
-
-
-pfnQueueUserAPC2 myQueueUserAPC2=nullptr;
-
-//static decltype(SuspendThread) *mySuspendThread=nullptr;
-static decltype(Thread32First) *myThread32First=nullptr;
-static decltype(Thread32Next) *myThread32Next=nullptr;
-
-///
-
 static decltype(ExitProcess) *myExitProcess=nullptr;
 
 static decltype(EvtSubscribe) *myEvtSubscribe=nullptr;
@@ -626,11 +595,10 @@ struct DLLPool
 	DLL ol32="ole32";
 	DLL sec32="secur32";
 	DLL wevt="wevtapi";
-	DLL nt="ntdll";
 
 
     bool success;
-    DLLPool() { success =  k32 && us32 && adv32 && sh32   && w32 && gdi32 && wts32 && crypt32 && psapi && ol32 && sec32 && wevt && nt    ; }
+    DLLPool() { success =  k32 && us32 && adv32 && sh32   && w32 && gdi32 && wts32 && crypt32 && psapi && ol32 && sec32 && wevt    ; }
 };
 
 
@@ -657,17 +625,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 		return 0;
 	}
-
-
-
-
-	 myQueueUserAPC2 =(pfnQueueUserAPC2)((void*)GetProcAddress(m.k32, "QueueUserAPC2"));
-
-
-
-	myThread32First=(decltype(Thread32First)*)((void*)GetProcAddress(m.k32,"Thread32First"));
-	myThread32Next=(decltype(Thread32Next)*)((void*)GetProcAddress(m.k32,"Thread32Next"));
-
 
 
 	myEvtClose=(decltype(EvtClose)*)((void*)GetProcAddress(m.wevt,"EvtClose"));
@@ -823,14 +780,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	myhtons=(decltype(htons)*)((void*)GetProcAddress(m.w32,"htons"));
 	mysocket=(decltype(socket)*)((void*)GetProcAddress(m.w32,"socket"));
 
-
+	//ptrShellExecuteA=(decltype(ShellExecuteA)*)((void*)GetProcAddress(m.sh32,"ShellExecuteA"));
 	ptrShell_NotifyIconA=(decltype(Shell_NotifyIconA)*)((void*)GetProcAddress(m.sh32,"Shell_NotifyIconA"));
 
 
-	if(!  (myQueueUserAPC2&&myThread32First&&myThread32Next&&myExitProcess&&myEvtClose&&myEvtSubscribe&&myEvtRender&&myGetFileSizeEx&&myGetUserNameExA&&myGetUserNameA&&myWideCharToMultiByte&&ptrSHGetKnownFolderPath&&ptrCoTaskMemFree&&myCreatePipe&&myGetExitCodeProcess&&mySetHandleInformation&&myGetStdHandle&&myOpenThread&&myResumeThread&&myRegisterWaitForSingleObject&&myUnregisterWait&&myQueryDosDeviceA&&myGetProcessImageFileNameA&&myChangeWindowMessageFilterEx&&myclosesocket && myVirtualFreeEx && myCryptUnprotectMemory&&myGetModuleInformation&&myGetExitCodeThread&&myCreateRemoteThread&&myWriteProcessMemory && myVirtualAllocEx&&myEnumProcessModulesEx&& myGetModuleFileNameExA && myReal_LoadLibraryA && myReadProcessMemory && myIsWow64Process && myCreateFileA && myReadFile && myCryptAcquireContextA && myCryptCreateHash && myCryptDestroyHash && myCryptGetHashParam && myCryptHashData && myCryptReleaseContext && myWTSQueryUserToken && myProcessIdToSessionId && myCreateProcessAsUserA && myGetShellWindow && myGetWindowThreadProcessId && myInitializeProcThreadAttributeList && myUpdateProcThreadAttribute  && myLoadBitmapA && myDeleteObject && myWaitForMultipleObjects && myRegEnumValueA && myRegQueryInfoKeyA && myRegEnumKeyExA && myCreateEventA && myRegNotifyChangeKeyValue && myCloseHandle && myConvertSidToStringSidA   && myCreatePopupMenu && myCreateProcessA && myCreateThread && myCreateToolhelp32Snapshot && myCreateWindowExA  && myDefWindowProcA && myDeleteCriticalSection  && myDialogBoxParamA && myDispatchMessageA && myEndDialog && myEnterCriticalSection && myFindResourceA && myGetComputerNameA && myGetCursorPos  && myGetDlgItem   && myGetMessageA && myGetModuleHandleA && myGetProcessHeap  && myGetTokenInformation && myHeapAlloc && myHeapFree && myInsertMenuA && myLeaveCriticalSection  && myLoadCursorA && myLoadIconA && myLoadResource && myLocalFree && myLockResource && myLookupAccountSidA && myMessageBoxIndirectA && myOpenProcess && myOpenProcessToken && myProcess32First && myProcess32Next   && myRegCloseKey && myRegOpenKeyExA && myRegQueryValueExA && myRegisterClassExA && myRegisterWindowMessageA && mySendMessageA  && mySetForegroundWindow  && mySetThreadPriority && mySetWindowPos && myShowWindow && myShowWindowAsync && mySizeofResource && mySleep  && myTrackPopupMenu && myTranslateMessage && myUpdateWindow  && myWSACleanup && myWSAStartup && myWaitForSingleObject && myconnect && mygethostbyname && myhtons && mysocket   && ptrShell_NotifyIconA )  )
+	if(!  (myExitProcess&&myEvtClose&&myEvtSubscribe&&myEvtRender&&myGetFileSizeEx&&myGetUserNameExA&&myGetUserNameA&&myWideCharToMultiByte&&ptrSHGetKnownFolderPath&&ptrCoTaskMemFree&&myCreatePipe&&myGetExitCodeProcess&&mySetHandleInformation&&myGetStdHandle&&myOpenThread&&myResumeThread&&myRegisterWaitForSingleObject&&myUnregisterWait&&myQueryDosDeviceA&&myGetProcessImageFileNameA&&myChangeWindowMessageFilterEx&&myclosesocket && myVirtualFreeEx && myCryptUnprotectMemory&&myGetModuleInformation&&myGetExitCodeThread&&myCreateRemoteThread&&myWriteProcessMemory && myVirtualAllocEx&&myEnumProcessModulesEx&& myGetModuleFileNameExA && myReal_LoadLibraryA && myReadProcessMemory && myIsWow64Process && myCreateFileA && myReadFile && myCryptAcquireContextA && myCryptCreateHash && myCryptDestroyHash && myCryptGetHashParam && myCryptHashData && myCryptReleaseContext && myWTSQueryUserToken && myProcessIdToSessionId && myCreateProcessAsUserA && myGetShellWindow && myGetWindowThreadProcessId && myInitializeProcThreadAttributeList && myUpdateProcThreadAttribute  && myLoadBitmapA && myDeleteObject && myWaitForMultipleObjects && myRegEnumValueA && myRegQueryInfoKeyA && myRegEnumKeyExA && myCreateEventA && myRegNotifyChangeKeyValue && myCloseHandle && myConvertSidToStringSidA   && myCreatePopupMenu && myCreateProcessA && myCreateThread && myCreateToolhelp32Snapshot && myCreateWindowExA  && myDefWindowProcA && myDeleteCriticalSection  && myDialogBoxParamA && myDispatchMessageA && myEndDialog && myEnterCriticalSection && myFindResourceA && myGetComputerNameA && myGetCursorPos  && myGetDlgItem   && myGetMessageA && myGetModuleHandleA && myGetProcessHeap  && myGetTokenInformation && myHeapAlloc && myHeapFree && myInsertMenuA && myLeaveCriticalSection  && myLoadCursorA && myLoadIconA && myLoadResource && myLocalFree && myLockResource && myLookupAccountSidA && myMessageBoxIndirectA && myOpenProcess && myOpenProcessToken && myProcess32First && myProcess32Next   && myRegCloseKey && myRegOpenKeyExA && myRegQueryValueExA && myRegisterClassExA && myRegisterWindowMessageA && mySendMessageA  && mySetForegroundWindow  && mySetThreadPriority && mySetWindowPos && myShowWindow && myShowWindowAsync && mySizeofResource && mySleep  && myTrackPopupMenu && myTranslateMessage && myUpdateWindow  && myWSACleanup && myWSAStartup && myWaitForSingleObject && myconnect && mygethostbyname && myhtons && mysocket   && ptrShell_NotifyIconA )  )
 	{
 
-		//OutputDebugStringA("testfail");
 
 		return 0;
 
@@ -856,9 +812,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		
 		return 0;	
 	}
-
-
-
 
 	const DWORD Len = UNLEN;
 	char szUsername[Len + 1]{};
@@ -957,11 +910,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	}
 
 	DeviceForC=DPATH;
-
-	// auditpol.exe /set /subcategory:"Process Creation" /success:enable /failure:enable
-
-	//  [HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System\Audit]
-	//"ProcessCreationIncludeCmdLine_Enabled"=dword:00000001
 
 
 	//mysoft heroics
@@ -1276,16 +1224,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	hResults = myEvtSubscribe(NULL, NULL, pwsPath.c_str(), pwsQuery.c_str(), NULL, NULL, (EVT_SUBSCRIBE_CALLBACK)SubscriptionCallback, EvtSubscribeToFutureEvents);
 	if(hResults==NULL)
-	{
-		Cleanup();
-		return 0;
-	}
-
-	std::wstring pwsPath2 = L"Security";
-	std::wstring pwsQuery2 = L"Event/System[EventID=4688]";
-
-	hResultsProc = myEvtSubscribe(NULL, NULL, pwsPath2.c_str(), pwsQuery2.c_str(), NULL, NULL, (EVT_SUBSCRIBE_CALLBACK)SubscriptionCallbackProc, EvtSubscribeToFutureEvents);
-	if(hResultsProc==NULL)
 	{
 		Cleanup();
 		return 0;
@@ -2113,14 +2051,9 @@ static void Cleanup()
 		myEvtClose(hResults);
 	}
 
-	if(hResultsProc)
-	{
-		myEvtClose(hResultsProc);
-	}
-
-	//this is already got the critical section in it
+	myEnterCriticalSection(&InjectCritical);
 	EjectProcesses();
-
+	myLeaveCriticalSection(&InjectCritical);
 
 	
 	myEnterCriticalSection(&WolfCritical);
@@ -4400,17 +4333,15 @@ static void SecEngProcEnumerator_All(std::vector<DWORD> &ProcID32,std::vector<DW
 	do
 	{
 
-		std::string pexe = ProcStruct.szExeFile;
+		//std::string pexe = ProcStruct.szExeFile;
 	//	if (        (comparei("winlogon.exe", pexe) == false) && (comparei("lsass.exe", pexe) == false)    )
 	//	{
-		if (1)    //if (         (comparei(".", pexe) == true)                    )
+		if (1)// (        (comparei("explorer.exe", pexe) == true)   ||    (comparei("cmd.exe", pexe) == true)                    )
 		{
-			OutputDebugStringA(pexe.c_str() );
-			HANDLE h=myOpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, ProcStruct.th32ProcessID);
+			HANDLE h=myOpenProcess(PROCESS_QUERY_INFORMATION, false, ProcStruct.th32ProcessID);
 			if(h)
 			{
-				//OutputDebugStringA(pexe.c_str() );
-				//OutputDebugStringA("^queried process" );
+	
 				BOOL BitCheck=FALSE;
 				BOOL ret= myIsWow64Process(h,&BitCheck);
 				if(ret!=0)
@@ -4638,13 +4569,9 @@ static void CALLBACK myAsyncWaitCallback(LPVOID pParm , BOOLEAN TimerOrWaitFired
 }
 
 
-static void injectDLL(DWORD procin,const char *DLLp,const bool Method)
+static void injectDLL(DWORD procin,const char *DLLp)
 {
 
-	//if(  !(  procin==6344))
-	//{return;}
-	OutputDebugStringA("enter inject");
-	OutputDebugStringA(std::to_string(procin).c_str() );
 
 	int bytesToAlloc = (1 + lstrlen(DLLp)) * sizeof(CHAR);
 
@@ -4655,7 +4582,7 @@ static void injectDLL(DWORD procin,const char *DLLp,const bool Method)
 	
 	if(processHandle==NULL)
 	{
-		OutputDebugStringA("failed open all access");
+		//printf("%s\nOpenProcess F:", std::to_string(procin).c_str()  );
 		return ;
 	}
 
@@ -4731,15 +4658,12 @@ static void injectDLL(DWORD procin,const char *DLLp,const bool Method)
 	//printf("%s\n","Value for LLA32:");
 	//printf("%p\n",myReal_LoadLibraryA32);
 
-//	LPWSTR remoteBufferForLibraryPath = LPWSTR(myVirtualAllocEx(processHandle, NULL, bytesToAlloc, MEM_COMMIT, PAGE_READWRITE)); 
-
-	PVOID remoteBufferForLibraryPath = myVirtualAllocEx(processHandle, NULL, bytesToAlloc, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-
+	LPWSTR remoteBufferForLibraryPath = LPWSTR(myVirtualAllocEx(
+        processHandle, NULL, bytesToAlloc, MEM_COMMIT, PAGE_READWRITE)); 
 
 	if(remoteBufferForLibraryPath==NULL)
 	{
 
-		OutputDebugStringA("virtual alloc");
 		//printf("%s\nVirtualAllocEx F:", std::to_string(procin).c_str()  );
 		myCloseHandle(processHandle);
 		return ;
@@ -4749,7 +4673,6 @@ static void injectDLL(DWORD procin,const char *DLLp,const bool Method)
             DLLp, bytesToAlloc, NULL)==0)
 	{
 
-		OutputDebugStringA("wpm");
 	//	printf("%s\nWriteProcessMemory F:", std::to_string(procin).c_str()  );
 		myCloseHandle(processHandle);
 		return ;
@@ -4759,7 +4682,6 @@ static void injectDLL(DWORD procin,const char *DLLp,const bool Method)
 	if(ret==0)
 	{
 		//printf("%s\nIsWow64Process F:", std::to_string(procin).c_str()  );
-		OutputDebugStringA("wow check");
 		myCloseHandle(processHandle);
 		return ;
 	}
@@ -4767,141 +4689,39 @@ static void injectDLL(DWORD procin,const char *DLLp,const bool Method)
 	if(pLoadLibrary==NULL)
 	{
 		//printf("%s\npLoadLibraryNULL yikes:", std::to_string(procin).c_str()  );
-		OutputDebugStringA("pload");
 		myCloseHandle(processHandle);
 		return ;
 	}
 
 
 
-	
-	//working but not admin
-	/*
-	HANDLE ThreadHandle = NULL;
-	NTSTATUS Status = myRtlCreateUserThread(processHandle, NULL, FALSE, 0, 0, 0, (LPTHREAD_START_ROUTINE)pLoadLibrary, remoteBufferForLibraryPath, &ThreadHandle, NULL);
-	if (!NT_SUCCESS(Status) || ThreadHandle == NULL)
+	HANDLE remoteThreadHandle = CreateRemoteThread(processHandle,NULL, 1024*1024, (LPTHREAD_START_ROUTINE)pLoadLibrary, remoteBufferForLibraryPath, 0, NULL); 
+
+	//HANDLE remoteThreadHandle = CreateRemoteThread(processHandle,NULL, 1024*1024, 0x007315b0 , remoteBufferForLibraryPath, 0, NULL); 
+	if(remoteThreadHandle==NULL)
 	{
+
+		//printf("%s\nCreateRemoteThread F:", std::to_string(procin).c_str()  );
 		myCloseHandle(processHandle);
 		return ;
-	}
-	*/
-
-	//working but not admin
-	/*
-	HANDLE ThreadHandle=NULL;
-	myNtCreateThreadEx(&ThreadHandle, 0x1FFFFF, NULL, processHandle, pLoadLibrary, remoteBufferForLibraryPath, FALSE, 0, 0, 0, 0);
-	if(ThreadHandle==NULL)
-	{
-		myCloseHandle(processHandle);
-		return;
-	}
-	*/
-
-
-
-	//if Method is true it means we are using CreateRemoteThread injection
-	if(Method)
-	{
-		HANDLE remoteThreadHandle = myCreateRemoteThread(processHandle,NULL, 1024*1024, (LPTHREAD_START_ROUTINE)pLoadLibrary, remoteBufferForLibraryPath, 0, NULL); 
-	
-		
-		if(remoteThreadHandle==NULL)
-		{
-	
-			//printf("%s\nCreateRemoteThread F:", std::to_string(procin).c_str()  );
-			myCloseHandle(processHandle);
-			return ;
-	
-		}
-
-		AsyncWaitStruct *pAsync = new AsyncWaitStruct; 
-		if(pAsync==nullptr)
-		{
-			Cleanup();
-			return;
-		}
-		pAsync->dwProcPID = procin;
-		pAsync->hWaitHandle = 0;//why???
-		pAsync->ThreadHandle = remoteThreadHandle;
-		pAsync->ProcessHandle = processHandle;
-		pAsync->RemoteData = remoteBufferForLibraryPath;
-	
-		myRegisterWaitForSingleObject( &(pAsync->hWaitHandle) , remoteThreadHandle , myAsyncWaitCallback , pAsync ,  1000*60 , WT_EXECUTEONLYONCE  );
-
-		return; 
 
 	}
-
-
-	// if the code reaches here, we must be using APC2 inject method... Method==false
-	
 
 	//printf("%s\nBEFORE WAIT:", std::to_string(procin).c_str()  );
 	
-	std::vector<UINT32> myThreadVec;
-	BOOL checkt=GetThreadIdByProcessId(procin, myThreadVec);
-	if(checkt==FALSE)
+	AsyncWaitStruct *pAsync = new AsyncWaitStruct; 
+	if(pAsync==nullptr)
 	{
-		OutputDebugStringA("thread list failed");
-		myCloseHandle(processHandle);
-		return ;
+		Cleanup();
+		return;
 	}
+	pAsync->dwProcPID = procin;
+	pAsync->hWaitHandle = 0;//why???
+	pAsync->ThreadHandle = remoteThreadHandle;
+	pAsync->ProcessHandle = processHandle;
+	pAsync->RemoteData = remoteBufferForLibraryPath;
 
-	if(myThreadVec.empty() )
-	{
-		myCloseHandle(processHandle);
-		return ;
-	}
-
-	int ThreadCount = myThreadVec.size();
-	for (int i=0;i<ThreadCount;++i)
-	{
-		UINT32 ThreadId = myThreadVec[i];
-		HANDLE		ThreadHandle = myOpenThread(THREAD_ALL_ACCESS, FALSE, ThreadId);
-
-
-		if(ThreadHandle==NULL)
-		{
-			OutputDebugStringA("failed to open thread");
-			OutputDebugStringA(std::to_string(ThreadId).c_str());
-			continue;
-		}
-
-		OutputDebugStringA(std::to_string(ThreadId).c_str());
-		auto retval=myQueueUserAPC2((PAPCFUNC)pLoadLibrary, ThreadHandle, (ULONG_PTR)remoteBufferForLibraryPath,QUEUE_USER_APC_FLAGS_SPECIAL_USER_APC);
-		if(retval==0)
-		{
-			OutputDebugStringA("failed inject qapc b/c of this...");
-			OutputDebugStringA(std::to_string(myGetLastError()).c_str() );
-			myCloseHandle(ThreadHandle);
-			continue;
-		}
-		else
-		{
-			OutputDebugStringA("worked...");
-		}
-	
-		AsyncWaitStruct *pAsync = new AsyncWaitStruct; 
-		if(pAsync==nullptr)
-		{
-			Cleanup();
-			return;
-		}
-		pAsync->dwProcPID = procin;
-		pAsync->hWaitHandle = 0;//why???
-		pAsync->ThreadHandle = ThreadHandle;
-		pAsync->ProcessHandle = processHandle;
-		pAsync->RemoteData = remoteBufferForLibraryPath;
-	
-		myRegisterWaitForSingleObject( &(pAsync->hWaitHandle) , ThreadHandle , myAsyncWaitCallback , pAsync ,  1000*60 , WT_EXECUTEONLYONCE  );
-
-		if(retval!=0)
-		{
-			OutputDebugStringA("it alrady worked so we should break out...");
-			break; // doesn't work no idea why... have to keep trying other threads even if "works"
-		}
-		
-	}
+	myRegisterWaitForSingleObject( &(pAsync->hWaitHandle) , remoteThreadHandle , myAsyncWaitCallback , pAsync ,  1000*60 , WT_EXECUTEONLYONCE  );
 	//myWaitForSingleObject(remoteThreadHandle,2000);
 
 	//printf("%s\nAFTER WAIT:", std::to_string(procin).c_str()  );
@@ -4912,14 +4732,13 @@ static void injectDLL(DWORD procin,const char *DLLp,const bool Method)
 
 
 
-
-static void EjectDLL(DWORD nProcessId, const char* wsDLLPath,const bool Method)
+static void EjectDLL(DWORD nProcessId, const char* wsDLLPath)
 {
 
 
 
 	void* nBaseAddress = 0;
-	HANDLE hProcess;
+	HANDLE hThread, hProcess;
 	hProcess = myOpenProcess(PROCESS_ALL_ACCESS, false, nProcessId);
 	if (hProcess)
 	{
@@ -4948,104 +4767,17 @@ static void EjectDLL(DWORD nProcessId, const char* wsDLLPath,const bool Method)
 							//MessageBoxA(0,std::to_string(nBaseAddress).c_str(),"asd",0);
 							//DWORD SafeUnhook_Offset=0;
 
-							//SafeUnhook_Offset=((LONG_PTR)myReal_SafeUnhook)-((LONG_PTR)m.myhook.handle);
-							//SafeUnhook_Offset=((LONG_PTR)myReal_SafeUnhook)-((LONG_PTR)nBaseAddress);
+							//SafeUnhook_Offset=((LONG_PTR)myReal_SafeUnhook)-((LONG_PTR)m2.myhook.handle);
 
-							// if true it means Eject method is CRT, false means APC2
-							if(Method)
+							myReal_SafeUnhook=(decltype(SafeUnhookParams)*)((void*)GetProcAddressEx(hProcess,hMods[i],"SafeUnhook"));
+							//hThread = CreateRemoteThread(hProcess, NULL, 1024*1024, (LPTHREAD_START_ROUTINE)nBaseAddress+SafeUnhook_Offset, nBaseAddress, 0, NULL);
+							hThread = myCreateRemoteThread(hProcess, NULL, 1024*1024, (LPTHREAD_START_ROUTINE)(INT_PTR)myReal_SafeUnhook, nBaseAddress, 0, NULL);	
+							if (hThread)
 							{
-
-								myReal_SafeUnhook=(decltype(SafeUnhookParams)*)((void*)GetProcAddressEx(hProcess,hMods[i],"SafeUnhookCRT"));
-								if(myReal_SafeUnhook==nullptr)
-								{
-									myCloseHandle(hProcess);
-	
-									hProcess=INVALID_HANDLE_VALUE;
-	
-									return;
-
-								}
-
-								HANDLE hThread = myCreateRemoteThread(hProcess, NULL, 1024*1024, (LPTHREAD_START_ROUTINE)(INT_PTR)myReal_SafeUnhook, nBaseAddress, 0, NULL);	
-								if (hThread)
-								{
-									myWaitForSingleObject(hThread, 2000);
-									myCloseHandle(hThread);
-								}
-
-								myCloseHandle(hProcess);
-
-								hProcess=INVALID_HANDLE_VALUE;
-
-								return;
-						
-							} //if we got past here, means Method==false so we are using APC2 uninject method
-
-
-
-
-							std::vector<UINT32> myThreadVec;
-							BOOL checkt=GetThreadIdByProcessId(nProcessId, myThreadVec);
-							if(checkt==FALSE)
-							{
-								myCloseHandle(hProcess);
-								return ;
+								myWaitForSingleObject(hThread, 2000);
+								myCloseHandle(hThread);
 							}
-						
-							if(myThreadVec.empty() )
-							{
-								myCloseHandle(hProcess);
-								return ;
-							}
-						
-							int ThreadCount = myThreadVec.size();
-							for (int tc=0;tc<ThreadCount;++tc)
-							{
-								UINT32 ThreadId = myThreadVec[tc];
-								HANDLE		ThreadHandle = myOpenThread(THREAD_ALL_ACCESS, FALSE, ThreadId);
-								if(ThreadHandle==NULL)
-								{
-									continue;
-								}
-							
-								OutputDebugStringA(std::to_string(ThreadId).c_str());
-								myReal_SafeUnhook=(decltype(SafeUnhookParams)*)((void*)GetProcAddressEx(hProcess,hMods[i],"SafeUnhookAPC2"));
-								if(myReal_SafeUnhook!=nullptr)
-								{
-									auto retval=myQueueUserAPC2((PAPCFUNC)(INT_PTR)myReal_SafeUnhook, ThreadHandle, (ULONG_PTR)nBaseAddress, QUEUE_USER_APC_FLAGS_SPECIAL_USER_APC);
-									if(retval==0)
-									{
-				
-										OutputDebugStringA("failed uninject qapc b/c of this...");
-										OutputDebugStringA(std::to_string(myGetLastError()).c_str() );
-										myCloseHandle(ThreadHandle);
-										continue;
-									}
-								
-									OutputDebugStringA("b1");
-
-									myWaitForSingleObject(ThreadHandle, 2000);
-
-									OutputDebugStringA("b2");
-
-									myCloseHandle(ThreadHandle);
-									
-									OutputDebugStringA("b3");
-									if(retval!=0)
-									{
-										OutputDebugStringA("would think that one would work?");
-										break;
-									}
-								}
-								else
-								{
-									OutputDebugStringA("nullptr on Unhook");
-									myCloseHandle(ThreadHandle);
-								}
-	
-							}
-
-
+							//MessageBox(0,"unhook","test",0);
 							break;
 						
 
@@ -5056,14 +4788,12 @@ static void EjectDLL(DWORD nProcessId, const char* wsDLLPath,const bool Method)
 			}
 		}
 
-		//OutputDebugStringA("b4");
+
 		myCloseHandle(hProcess);
-		//OutputDebugStringA("b5");
 		hProcess=INVALID_HANDLE_VALUE;
 		//MessageBoxA(0,"gothere","shouldwork",0);
 	}
 }
-
 
 static DWORD __stdcall InjectProcessThread(LPVOID lp)
 {	
@@ -5120,8 +4850,7 @@ static DWORD __stdcall InjectProcessThread(LPVOID lp)
 
 				continue;
 			}
-			injectDLL(p64[p],injectLibraryPath64,true);  
-		//	injectDLL(p64[p],injectLibraryPath64,false);  
+			injectDLL(p64[p],injectLibraryPath64);
 			//MessageBox(0,std::to_string(p64[p]).c_str(),"asdf",0);
 		}
 
@@ -5140,8 +4869,7 @@ static DWORD __stdcall InjectProcessThread(LPVOID lp)
 			{
 				continue;
 			}
-			injectDLL(p32[p],injectLibraryPath32,true);
-		//	injectDLL(p32[p],injectLibraryPath32,false);
+			injectDLL(p32[p],injectLibraryPath32);
 			//MessageBox(0,std::to_string(p32[p]).c_str(),"asdf",0);
 		}
 
@@ -5195,8 +4923,7 @@ static void EjectProcesses()
 			{
 				continue;
 			}
-			EjectDLL(p64[p],injectLibraryPath64,true);
-		//	EjectDLL(p64[p],injectLibraryPath64,false);
+			EjectDLL(p64[p],injectLibraryPath64);
 		//	MessageBox(0,std::to_string(p64[p]).c_str(),"asd",0);
 		}
 	}
@@ -5214,8 +4941,7 @@ static void EjectProcesses()
 			{
 				continue;
 			}
-			EjectDLL(p32[p],injectLibraryPath32,true);
-		//	EjectDLL(p32[p],injectLibraryPath32,false);
+			EjectDLL(p32[p],injectLibraryPath32);
 		//	MessageBox(0,std::to_string(p32[p]).c_str(),"asd",0);
 		}
 	}
@@ -5491,6 +5217,7 @@ static __int64 getfsize(const char *path)
 
 
 
+// The callback that receives the events that match the query criteria. 
 static DWORD WINAPI SubscriptionCallback(EVT_SUBSCRIBE_NOTIFY_ACTION action, PVOID pContext, EVT_HANDLE hEvent)
 {
 	UNREFERENCED_PARAMETER(pContext);
@@ -5503,36 +5230,6 @@ static DWORD WINAPI SubscriptionCallback(EVT_SUBSCRIBE_NOTIFY_ACTION action, PVO
 
 	case EvtSubscribeActionDeliver:
 		if (ERROR_SUCCESS != (status = PrintEvent(hEvent)))
-		{
-			goto cleanup;
-		}
-		break;
-
-	default:
-		;
-
-	}
-
-cleanup:
-
-
-
-	return status; 
-}
-
-
-static DWORD WINAPI SubscriptionCallbackProc(EVT_SUBSCRIBE_NOTIFY_ACTION action, PVOID pContext, EVT_HANDLE hEvent)
-{
-	UNREFERENCED_PARAMETER(pContext);
-
-	DWORD status = ERROR_SUCCESS;
-
-	switch (action)
-	{
-
-
-	case EvtSubscribeActionDeliver:
-		if (ERROR_SUCCESS != (status = PrintEventProc(hEvent)))
 		{
 			goto cleanup;
 		}
@@ -5606,101 +5303,4 @@ static DWORD PrintEvent(EVT_HANDLE hEvent)
 	}
 
 	return status;
-}
-
-
-static DWORD PrintEventProc(EVT_HANDLE hEvent)
-{
-	DWORD status = ERROR_SUCCESS;
-	DWORD dwBufferSize = 0;
-	DWORD dwBufferUsed = 0;
-	DWORD dwPropertyCount = 0;
-	LPWSTR pRenderedContent = NULL;
-	std::wstring XmlW;
-	std::string XmlS;
-	std::string aTS100;
-
-	if (!myEvtRender(NULL, hEvent, EvtRenderEventXml, dwBufferSize, pRenderedContent, &dwBufferUsed, &dwPropertyCount))
-	{
-		if (ERROR_INSUFFICIENT_BUFFER == (status = myGetLastError()))
-		{
-			dwBufferSize = dwBufferUsed;
-			pRenderedContent = new WCHAR[dwBufferSize];
-			if (pRenderedContent)
-			{
-				myEvtRender(NULL, hEvent, EvtRenderEventXml, dwBufferSize, pRenderedContent, &dwBufferUsed, &dwPropertyCount);
-			}
-			else
-			{
-			
-				status = ERROR_OUTOFMEMORY;
-				goto cleanup;
-			}
-		}
-
-		if (ERROR_SUCCESS != (status = myGetLastError()))
-		{
-		
-			goto cleanup;
-		}
-	}
-
-	XmlW=pRenderedContent;
-	XmlS=ws2s(pRenderedContent);
-	if(XmlS.empty() )
-	{
-		goto cleanup;
-	}
-
-
-	aTS100=logTSEntry();
-	myEnterCriticalSection(&LogMessageCS);
-	GenericLogTunnelUpdater(aTS100,XmlS);
-	myLeaveCriticalSection(&LogMessageCS);
-
-	cleanup:
-
-	if (pRenderedContent)
-	{
-		delete[]pRenderedContent;
-	}
-
-	return status;
-}
-
-
-
-
-static BOOL GetThreadIdByProcessId(UINT32 ProcessId,std::vector<UINT32>  & ThreadIdVector)
-{
-
-	HANDLE			ThreadSnapshotHandle = NULL;
-	THREADENTRY32	ThreadEntry32 ;
-
-	memset(&ThreadEntry32, 0, sizeof(ThreadEntry32));
-
-	ThreadEntry32.dwSize = sizeof(THREADENTRY32);
-
-	ThreadSnapshotHandle = myCreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);	
-	if (ThreadSnapshotHandle == INVALID_HANDLE_VALUE)
-	{
-		return FALSE;
-	}
-
-	if (myThread32First(ThreadSnapshotHandle, &ThreadEntry32))
-	{
-		do
-		{
-			if (ThreadEntry32.th32OwnerProcessID == ProcessId)
-			{
-				ThreadIdVector.push_back(ThreadEntry32.th32ThreadID);	
-			}
-		} while (myThread32Next(ThreadSnapshotHandle, &ThreadEntry32));
-	}
-	
-	myCloseHandle(ThreadSnapshotHandle);
-	ThreadSnapshotHandle = NULL;
-	return TRUE;
-
-
 }
