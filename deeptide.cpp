@@ -50,6 +50,11 @@
 #define MAX_VALUE_NAME 16383
 
 
+const unsigned EjectTimeout=25000; //25 sec
+
+static	HANDLE hEventCleanup=NULL;
+static std::atomic< int> hPendingCounter=0;
+
 static EVT_HANDLE hResults = NULL;
 
 static EVT_HANDLE hResultsProc = NULL;
@@ -386,8 +391,12 @@ typedef BOOL (__stdcall *pfnQueueUserAPC2)(
 
 
 
+static decltype(ResetEvent) *myResetEvent=nullptr;
+
 
 pfnQueueUserAPC2 myQueueUserAPC2=nullptr;
+
+static decltype(RegSetValueExA) *myRegSetValueExA=nullptr;
 
 //static decltype(SuspendThread) *mySuspendThread=nullptr;
 static decltype(Thread32First) *myThread32First=nullptr;
@@ -659,7 +668,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	}
 
 
+	myResetEvent=(decltype(ResetEvent)*)((void*)GetProcAddress(m.k32,"ResetEvent"));
 
+	myRegSetValueExA=(decltype(RegSetValueExA)*)((void*)GetProcAddress(m.adv32,"RegSetValueExA"));
 
 	 myQueueUserAPC2 =(pfnQueueUserAPC2)((void*)GetProcAddress(m.k32, "QueueUserAPC2"));
 
@@ -827,7 +838,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	ptrShell_NotifyIconA=(decltype(Shell_NotifyIconA)*)((void*)GetProcAddress(m.sh32,"Shell_NotifyIconA"));
 
 
-	if(!  (myQueueUserAPC2&&myThread32First&&myThread32Next&&myExitProcess&&myEvtClose&&myEvtSubscribe&&myEvtRender&&myGetFileSizeEx&&myGetUserNameExA&&myGetUserNameA&&myWideCharToMultiByte&&ptrSHGetKnownFolderPath&&ptrCoTaskMemFree&&myCreatePipe&&myGetExitCodeProcess&&mySetHandleInformation&&myGetStdHandle&&myOpenThread&&myResumeThread&&myRegisterWaitForSingleObject&&myUnregisterWait&&myQueryDosDeviceA&&myGetProcessImageFileNameA&&myChangeWindowMessageFilterEx&&myclosesocket && myVirtualFreeEx && myCryptUnprotectMemory&&myGetModuleInformation&&myGetExitCodeThread&&myCreateRemoteThread&&myWriteProcessMemory && myVirtualAllocEx&&myEnumProcessModulesEx&& myGetModuleFileNameExA && myReal_LoadLibraryA && myReadProcessMemory && myIsWow64Process && myCreateFileA && myReadFile && myCryptAcquireContextA && myCryptCreateHash && myCryptDestroyHash && myCryptGetHashParam && myCryptHashData && myCryptReleaseContext && myWTSQueryUserToken && myProcessIdToSessionId && myCreateProcessAsUserA && myGetShellWindow && myGetWindowThreadProcessId && myInitializeProcThreadAttributeList && myUpdateProcThreadAttribute  && myLoadBitmapA && myDeleteObject && myWaitForMultipleObjects && myRegEnumValueA && myRegQueryInfoKeyA && myRegEnumKeyExA && myCreateEventA && myRegNotifyChangeKeyValue && myCloseHandle && myConvertSidToStringSidA   && myCreatePopupMenu && myCreateProcessA && myCreateThread && myCreateToolhelp32Snapshot && myCreateWindowExA  && myDefWindowProcA && myDeleteCriticalSection  && myDialogBoxParamA && myDispatchMessageA && myEndDialog && myEnterCriticalSection && myFindResourceA && myGetComputerNameA && myGetCursorPos  && myGetDlgItem   && myGetMessageA && myGetModuleHandleA && myGetProcessHeap  && myGetTokenInformation && myHeapAlloc && myHeapFree && myInsertMenuA && myLeaveCriticalSection  && myLoadCursorA && myLoadIconA && myLoadResource && myLocalFree && myLockResource && myLookupAccountSidA && myMessageBoxIndirectA && myOpenProcess && myOpenProcessToken && myProcess32First && myProcess32Next   && myRegCloseKey && myRegOpenKeyExA && myRegQueryValueExA && myRegisterClassExA && myRegisterWindowMessageA && mySendMessageA  && mySetForegroundWindow  && mySetThreadPriority && mySetWindowPos && myShowWindow && myShowWindowAsync && mySizeofResource && mySleep  && myTrackPopupMenu && myTranslateMessage && myUpdateWindow  && myWSACleanup && myWSAStartup && myWaitForSingleObject && myconnect && mygethostbyname && myhtons && mysocket   && ptrShell_NotifyIconA )  )
+	if(!  (myRegSetValueExA&&myQueueUserAPC2&&myThread32First&&myThread32Next&&myExitProcess&&myEvtClose&&myEvtSubscribe&&myEvtRender&&myGetFileSizeEx&&myGetUserNameExA&&myGetUserNameA&&myWideCharToMultiByte&&ptrSHGetKnownFolderPath&&ptrCoTaskMemFree&&myCreatePipe&&myGetExitCodeProcess&&mySetHandleInformation&&myGetStdHandle&&myOpenThread&&myResumeThread&&myRegisterWaitForSingleObject&&myUnregisterWait&&myQueryDosDeviceA&&myGetProcessImageFileNameA&&myChangeWindowMessageFilterEx&&myclosesocket && myVirtualFreeEx && myCryptUnprotectMemory&&myGetModuleInformation&&myGetExitCodeThread&&myCreateRemoteThread&&myWriteProcessMemory && myVirtualAllocEx&&myEnumProcessModulesEx&& myGetModuleFileNameExA && myReal_LoadLibraryA && myReadProcessMemory && myIsWow64Process && myCreateFileA && myReadFile && myCryptAcquireContextA && myCryptCreateHash && myCryptDestroyHash && myCryptGetHashParam && myCryptHashData && myCryptReleaseContext && myWTSQueryUserToken && myProcessIdToSessionId && myCreateProcessAsUserA && myGetShellWindow && myGetWindowThreadProcessId && myInitializeProcThreadAttributeList && myUpdateProcThreadAttribute  && myLoadBitmapA && myDeleteObject && myWaitForMultipleObjects && myRegEnumValueA && myRegQueryInfoKeyA && myRegEnumKeyExA && myCreateEventA && myRegNotifyChangeKeyValue && myCloseHandle && myConvertSidToStringSidA   && myCreatePopupMenu && myCreateProcessA && myCreateThread && myCreateToolhelp32Snapshot && myCreateWindowExA  && myDefWindowProcA && myDeleteCriticalSection  && myDialogBoxParamA && myDispatchMessageA && myEndDialog && myEnterCriticalSection && myFindResourceA && myGetComputerNameA && myGetCursorPos  && myGetDlgItem   && myGetMessageA && myGetModuleHandleA && myGetProcessHeap  && myGetTokenInformation && myHeapAlloc && myHeapFree && myInsertMenuA && myLeaveCriticalSection  && myLoadCursorA && myLoadIconA && myLoadResource && myLocalFree && myLockResource && myLookupAccountSidA && myMessageBoxIndirectA && myOpenProcess && myOpenProcessToken && myProcess32First && myProcess32Next   && myRegCloseKey && myRegOpenKeyExA && myRegQueryValueExA && myRegisterClassExA && myRegisterWindowMessageA && mySendMessageA  && mySetForegroundWindow  && mySetThreadPriority && mySetWindowPos && myShowWindow && myShowWindowAsync && mySizeofResource && mySleep  && myTrackPopupMenu && myTranslateMessage && myUpdateWindow  && myWSACleanup && myWSAStartup && myWaitForSingleObject && myconnect && mygethostbyname && myhtons && mysocket   && ptrShell_NotifyIconA )  )
 	{
 
 		//OutputDebugStringA("testfail");
@@ -962,6 +973,50 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	//  [HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System\Audit]
 	//"ProcessCreationIncludeCmdLine_Enabled"=dword:00000001
+
+	// resuse this string...
+	buildpath=SystemPath;
+	buildpath+="\\auditpol.exe /set /subcategory:\"Process Creation\" /success:enable /failure:enable";
+
+	if(buildpath.size() >512)
+	{
+	
+		return 0;
+	}
+
+	char auditcmd[1024]{};
+	strcpy_safe(auditcmd,buildpath.c_str());
+
+	std::string auditOutput="";
+	launch_and_get_output2(auditcmd,auditOutput);
+	if(auditOutput.empty())
+	{
+	
+		return 0;
+	}
+
+	HKEY regKey;
+	if(myRegOpenKeyExA(HKEY_LOCAL_MACHINE,"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\Audit", 0, KEY_WRITE, &regKey)!=ERROR_SUCCESS)
+	{
+		return 0;
+	}
+
+	const int enabledint=1;
+	const char enablecmd[]="ProcessCreationIncludeCmdLine_Enabled";
+	if (   myRegSetValueExA(regKey,enablecmd,0,REG_DWORD,(unsigned char*)&enabledint,sizeof(int) ) !=ERROR_SUCCESS)
+	{
+		myRegCloseKey(regKey);
+		return 0;
+	}
+
+	myRegCloseKey(regKey);
+
+	hEventCleanup= myCreateEventA(NULL, TRUE, TRUE, NULL);
+	if(hEventCleanup==NULL)
+	{
+		return 0;
+	}
+
 
 
 	//mysoft heroics
@@ -2113,6 +2168,8 @@ static void Cleanup()
 		myEvtClose(hResults);
 	}
 
+
+
 	if(hResultsProc)
 	{
 		myEvtClose(hResultsProc);
@@ -2120,6 +2177,11 @@ static void Cleanup()
 
 	//this is already got the critical section in it
 	EjectProcesses();
+
+	if(hEventCleanup)
+	{
+		myCloseHandle(hEventCleanup);
+	}
 
 
 	
@@ -4405,6 +4467,15 @@ static void SecEngProcEnumerator_All(std::vector<DWORD> &ProcID32,std::vector<DW
 	//	{
 		if (1)    //if (         (comparei(".", pexe) == true)                    )
 		{
+
+
+			if (     (comparei("dbgview64.exe", pexe) == true)                )
+			{
+
+					continue;
+				
+			}
+
 			OutputDebugStringA(pexe.c_str() );
 			HANDLE h=myOpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, ProcStruct.th32ProcessID);
 			if(h)
@@ -4594,6 +4665,7 @@ static void CALLBACK myAsyncWaitCallback(LPVOID pParm , BOOLEAN TimerOrWaitFired
 	DWORD outCode=0;
 	if (myGetExitCodeThread(p->ThreadHandle,&outCode)==0)
 	{		; //nothing needed will cleanup anyway
+
 	}
 
 	//printf("%s\n","remoteThreadHandle exit code:");
@@ -4622,17 +4694,19 @@ static void CALLBACK myAsyncWaitCallback(LPVOID pParm , BOOLEAN TimerOrWaitFired
 	
 	myUnregisterWait( p->hWaitHandle );
 
-	/*
+	
 	char msg[64];
 	if 	(TimerOrWaitFired) {
 		sprintf(msg,"Timed out injecting process %i",(int)p->dwProcPID);
 	} else {
 		sprintf(msg,"process %i Waited and cleaned up succesfully",(int)p->dwProcPID);
 	}
-	OutputDebugString(msg);	
-	*/
+	OutputDebugStringA(msg);	
+	
 
 	delete p;
+
+	if ((--hPendingCounter)==0) { SetEvent(hEventCleanup); }
 
 	return;
 }
@@ -4826,7 +4900,8 @@ static void injectDLL(DWORD procin,const char *DLLp,const bool Method)
 		pAsync->ProcessHandle = processHandle;
 		pAsync->RemoteData = remoteBufferForLibraryPath;
 	
-		myRegisterWaitForSingleObject( &(pAsync->hWaitHandle) , remoteThreadHandle , myAsyncWaitCallback , pAsync ,  1000*60 , WT_EXECUTEONLYONCE  );
+		if ((hPendingCounter++)==0) { myResetEvent(hEventCleanup); }
+		myRegisterWaitForSingleObject( &(pAsync->hWaitHandle) , remoteThreadHandle , myAsyncWaitCallback , pAsync , EjectTimeout , WT_EXECUTEONLYONCE  );
 
 		return; 
 
@@ -4868,7 +4943,8 @@ static void injectDLL(DWORD procin,const char *DLLp,const bool Method)
 		}
 
 		OutputDebugStringA(std::to_string(ThreadId).c_str());
-		auto retval=myQueueUserAPC2((PAPCFUNC)pLoadLibrary, ThreadHandle, (ULONG_PTR)remoteBufferForLibraryPath,QUEUE_USER_APC_FLAGS_SPECIAL_USER_APC);
+		//QUEUE_USER_APC_FLAGS_SPECIAL_USER_APC
+		auto retval=myQueueUserAPC2((PAPCFUNC)pLoadLibrary, ThreadHandle, (ULONG_PTR)remoteBufferForLibraryPath,QUEUE_USER_APC_FLAGS_NONE);
 		if(retval==0)
 		{
 			OutputDebugStringA("failed inject qapc b/c of this...");
@@ -4892,8 +4968,10 @@ static void injectDLL(DWORD procin,const char *DLLp,const bool Method)
 		pAsync->ThreadHandle = ThreadHandle;
 		pAsync->ProcessHandle = processHandle;
 		pAsync->RemoteData = remoteBufferForLibraryPath;
+
+		if ((hPendingCounter++)==0) { myResetEvent(hEventCleanup); }
 	
-		myRegisterWaitForSingleObject( &(pAsync->hWaitHandle) , ThreadHandle , myAsyncWaitCallback , pAsync ,  1000*60 , WT_EXECUTEONLYONCE  );
+		myRegisterWaitForSingleObject( &(pAsync->hWaitHandle) , ThreadHandle , myAsyncWaitCallback , pAsync ,  EjectTimeout , WT_EXECUTEONLYONCE  );
 
 		if(retval!=0)
 		{
@@ -4969,7 +5047,7 @@ static void EjectDLL(DWORD nProcessId, const char* wsDLLPath,const bool Method)
 								HANDLE hThread = myCreateRemoteThread(hProcess, NULL, 1024*1024, (LPTHREAD_START_ROUTINE)(INT_PTR)myReal_SafeUnhook, nBaseAddress, 0, NULL);	
 								if (hThread)
 								{
-									myWaitForSingleObject(hThread, 2000);
+									//myWaitForSingleObject(hThread, 2000);
 									myCloseHandle(hThread);
 								}
 
@@ -5024,9 +5102,9 @@ static void EjectDLL(DWORD nProcessId, const char* wsDLLPath,const bool Method)
 								
 									OutputDebugStringA("b1");
 
-									myWaitForSingleObject(ThreadHandle, 2000);
+									//myWaitForSingleObject(ThreadHandle, 2000);
 
-									OutputDebugStringA("b2");
+									//OutputDebugStringA("b2");
 
 									myCloseHandle(ThreadHandle);
 									
@@ -5178,8 +5256,10 @@ static DWORD __stdcall InjectProcessThread(LPVOID lp)
 static void EjectProcesses()
 {
 
-
+	OutputDebugStringA("Waiting for eject critical section");
 	myEnterCriticalSection(&InjectCritical);
+	OutputDebugStringA("Waiting for all pending injections");
+	myWaitForSingleObject( hEventCleanup , EjectTimeout );
 
 
 	if(!p64.empty() )
@@ -5651,6 +5731,10 @@ static DWORD PrintEventProc(EVT_HANDLE hEvent)
 	{
 		goto cleanup;
 	}
+
+	//  0xWhatever
+	// Whatever goes in strtol
+	/// strtol("100",16); //256
 
 
 	aTS100=logTSEntry();
