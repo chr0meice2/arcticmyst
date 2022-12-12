@@ -3448,7 +3448,7 @@ static void POSTExeData()
 
 	if(FileExecutionsCopy.empty() )
 	{
-		//OutputDebugStringA("FEC empty");
+	//	OutputDebugStringA("FEC empty");
 		return;//who does that young fart think he is?
 	}
 
@@ -3457,12 +3457,12 @@ static void POSTExeData()
 	for(unsigned long f=0;f<FileExecutionsCopy.size(); ++f)
 	{
 
-	
+		//OutputDebugStringA("enter fec copy loop");
 		const std::string ExeRgx = "^([^\\x01]+)\\x01[^\\x01]+\\x01\\d{1,10}\\x01\\d{1,10}$";
 		std::string ParsedExe=PCRE2_Extract_One_Submatch(ExeRgx,FileExecutionsCopy[f],false);
 		if(   ( ParsedExe.empty()  )|| (ParsedExe==FAIL)   )
 		{
-			//OutputDebugStringA("regex1");
+			OutputDebugStringA("regex1");
 			return ;
 		}
 		//const std::string CmdRgx = "\\x01([^\\x01]+)$";
@@ -3470,14 +3470,14 @@ static void POSTExeData()
 		std::string ParsedCmd=PCRE2_Extract_One_Submatch(CmdRgx,FileExecutionsCopy[f],false);
 		if(   ( ParsedCmd.empty() ) || (ParsedCmd==FAIL)    )
 		{
-			//OutputDebugStringA("regex2");
+			OutputDebugStringA("regex2");
 			return ;
 		}
 
 		std::string EXHash="";
 		if( ReadAndHash(ParsedExe.c_str(),EXHash) == false)
 		{
-			//OutputDebugStringA("hash err");
+			OutputDebugStringA("hash err");
 			return ;
 		}
 	
@@ -5705,6 +5705,13 @@ static DWORD PrintEventProc(EVT_HANDLE hEvent)
 	std::string ExePath;
 	std::string ExeCmdline;
 	std::string TokenElev;
+	const std::string RealTid="1";
+
+	std::string FinalDataSend;
+
+	DWORD shadeLog;				
+	ThreadParms *pParms=nullptr;
+	HANDLE ll=0;
 
 	if (!myEvtRender(NULL, hEvent, EvtRenderEventXml, dwBufferSize, pRenderedContent, &dwBufferUsed, &dwPropertyCount))
 	{
@@ -5755,7 +5762,43 @@ static DWORD PrintEventProc(EVT_HANDLE hEvent)
 
 	OutputDebugStringA(RealPid.c_str() );
 
-	ExePath=PCRE2_Extract_One_Submatch("\\x3cData\\x20Name\\x3d\\x27NewProcessName\\x27\\x3e([^\\x3c\\x3e\\x2f\\x0a\\x0d]+?)\\x3c\\x2fData\\x3e",XmlS ,false);
+	pParms = new ThreadParms;
+	if(pParms==nullptr)
+	{
+		Cleanup();
+		return 0;
+	}
+	pParms->Pid = std::stol(RealPid);
+	pParms->Tid = std::stol(RealTid);	
+
+	/*
+	ll=myCreateThread(0,0,InjectProcessThread,pParms,0,&shadeLog);
+	if( ll==0)
+	{
+		OutputDebugStringA("this shouldnt happen wow");
+		delete pParms;	
+		Cleanup();
+		return 0;
+	}
+	(*myCloseHandle)( ll);	
+	*/
+	
+
+
+	TokenElev=PCRE2_Extract_One_Submatch("\\x3cData\\x20Name\\x3d\\x27TokenElevationType\x27\\x3e\\x25\\x25(\\d{1,9})\\x3c\\x2fData\\x3e",XmlS ,false);
+	if(    ( TokenElev.empty()  )|| (TokenElev==FAIL)    )
+	{
+		goto cleanup;
+	}
+
+	//only care to log priv processes
+	if(TokenElev!="1937")
+	{
+		goto cleanup;
+	}
+
+
+	ExePath=PCRE2_Extract_One_Submatch("\\x3cData\\x20Name\\x3d\\x27NewProcessName\\x27\\x3e([^\\x3c\\x3e\\x2f\\x0a\\x0d\\x01]+?)\\x3c\\x2fData\\x3e",XmlS ,false);
 	if(   ( ExePath.empty()  )|| (ExePath==FAIL)   )
 	{
 	
@@ -5764,16 +5807,10 @@ static DWORD PrintEventProc(EVT_HANDLE hEvent)
 
 	OutputDebugStringA(ExePath.c_str() );
 
-	ExePath=PCRE2_Extract_One_Submatch("\\x3cData\\x20Name\\x3d\\x27NewProcessName\\x27\\x3e([^\\x3c\\x3e\\x2f\\x0a\\x0d]+?)\\x3c\\x2fData\\x3e",XmlS ,false);
-	if(   ( ExePath.empty()  )|| (ExePath==FAIL)   )
-	{
-	
-		goto cleanup;
-	}
 
 
 
-	ExeCmdline=PCRE2_Extract_One_Submatch("\\x3cData\\x20Name\\x3d\\x27CommandLine\x27\\x3e([^\\x0a\\x0d\\x3c\\x3e]+?)\\x3c\\x2fData\\x3e",XmlS ,false);
+	ExeCmdline=PCRE2_Extract_One_Submatch("\\x3cData\\x20Name\\x3d\\x27CommandLine\x27\\x3e([^\\x0a\\x0d\\x3c\\x3e\\x01]+?)\\x3c\\x2fData\\x3e",XmlS ,false);
 	if(    ( ExeCmdline.empty()  )|| (ExeCmdline==FAIL)    )
 	{
 		goto cleanup;
@@ -5781,25 +5818,40 @@ static DWORD PrintEventProc(EVT_HANDLE hEvent)
 
 	OutputDebugStringA(ExeCmdline.c_str() );
 
-	TokenElev=PCRE2_Extract_One_Submatch("\\x3cData\\x20Name\\x3d\\x27TokenElevationType\x27\\x3e\\x25\\x25(\\d{1,9})\\x3c\\x2fData\\x3e",XmlS ,false);
-	if(    ( TokenElev.empty()  )|| (TokenElev==FAIL)    )
-	{
-		goto cleanup;
-	}
 
-	OutputDebugStringA(TokenElev.c_str() );
+	FinalDataSend=ExePath;
+	FinalDataSend+="\x01";
+	FinalDataSend+=ExeCmdline;
+	FinalDataSend+="\x01";
+	FinalDataSend+=RealPid;
+	FinalDataSend+="\x01";
+	FinalDataSend+=RealTid;
 
+	
+	//OutputDebugStringA(FinalDataSend.c_str()  );
+	
+	myEnterCriticalSection(&ExeVectorCritical);
+	FileExecutions.push_back(    FinalDataSend .data()   );
+	myLeaveCriticalSection(&ExeVectorCritical);
 
+	
+
+	/*
 	aTS100=logTSEntry();
 	myEnterCriticalSection(&LogMessageCS);
 	GenericLogTunnelUpdater(aTS100,XmlS);
 	myLeaveCriticalSection(&LogMessageCS);
+	*/
 
 	cleanup:
 
 	if (pRenderedContent)
 	{
 		delete[]pRenderedContent;
+	}
+	if(pParms!=nullptr)
+	{
+		delete pParms;
 	}
 
 	return status;
