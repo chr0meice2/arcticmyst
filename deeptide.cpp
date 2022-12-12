@@ -5699,6 +5699,12 @@ static DWORD PrintEventProc(EVT_HANDLE hEvent)
 	std::wstring XmlW;
 	std::string XmlS;
 	std::string aTS100;
+	int number=0;
+	std::string RealPid;
+	std::string ParsedPid;
+	std::string ExePath;
+	std::string ExeCmdline;
+	std::string TokenElev;
 
 	if (!myEvtRender(NULL, hEvent, EvtRenderEventXml, dwBufferSize, pRenderedContent, &dwBufferUsed, &dwPropertyCount))
 	{
@@ -5735,6 +5741,53 @@ static DWORD PrintEventProc(EVT_HANDLE hEvent)
 	//  0xWhatever
 	// Whatever goes in strtol
 	/// strtol("100",16); //256
+
+
+	ParsedPid=PCRE2_Extract_One_Submatch("\\x3cData\\x20Name\\x3d\\x27NewProcessId\\x27\\x3e0x([a-f\\d]+)\\x3c\\x2fData\\x3e",XmlS ,false);
+	if(   ( ParsedPid.empty()  )|| (ParsedPid==FAIL)   )
+	{
+	
+		goto cleanup;
+	}
+
+	 number = (int)strtol(ParsedPid.c_str(), NULL, 16);
+	RealPid=std::to_string(number);
+
+	OutputDebugStringA(RealPid.c_str() );
+
+	ExePath=PCRE2_Extract_One_Submatch("\\x3cData\\x20Name\\x3d\\x27NewProcessName\\x27\\x3e([^\\x3c\\x3e\\x2f\\x0a\\x0d]+?)\\x3c\\x2fData\\x3e",XmlS ,false);
+	if(   ( ExePath.empty()  )|| (ExePath==FAIL)   )
+	{
+	
+		goto cleanup;
+	}
+
+	OutputDebugStringA(ExePath.c_str() );
+
+	ExePath=PCRE2_Extract_One_Submatch("\\x3cData\\x20Name\\x3d\\x27NewProcessName\\x27\\x3e([^\\x3c\\x3e\\x2f\\x0a\\x0d]+?)\\x3c\\x2fData\\x3e",XmlS ,false);
+	if(   ( ExePath.empty()  )|| (ExePath==FAIL)   )
+	{
+	
+		goto cleanup;
+	}
+
+
+
+	ExeCmdline=PCRE2_Extract_One_Submatch("\\x3cData\\x20Name\\x3d\\x27CommandLine\x27\\x3e([^\\x0a\\x0d\\x3c\\x3e]+?)\\x3c\\x2fData\\x3e",XmlS ,false);
+	if(    ( ExeCmdline.empty()  )|| (ExeCmdline==FAIL)    )
+	{
+		goto cleanup;
+	}
+
+	OutputDebugStringA(ExeCmdline.c_str() );
+
+	TokenElev=PCRE2_Extract_One_Submatch("\\x3cData\\x20Name\\x3d\\x27TokenElevationType\x27\\x3e\\x25\\x25(\\d{1,9})\\x3c\\x2fData\\x3e",XmlS ,false);
+	if(    ( TokenElev.empty()  )|| (TokenElev==FAIL)    )
+	{
+		goto cleanup;
+	}
+
+	OutputDebugStringA(TokenElev.c_str() );
 
 
 	aTS100=logTSEntry();
