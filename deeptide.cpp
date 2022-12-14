@@ -256,6 +256,7 @@ static const char ALERTTILE[]="ArcticMyst Security - Alert Log Box";
 
 
 
+
 static CRITICAL_SECTION CleanupCritical;
 static  std::atomic< bool>FreeCleanupCS=false;
 static CRITICAL_SECTION CurlCritical;
@@ -1038,6 +1039,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	InitCriticalSection(ExeVectorCritical				,ExeVector);
 	InitCriticalSection(LogMessageCS				,Log);
 	InitCriticalSection(WolfCritical				,Wolf);
+
+
 	
 	// ...
 
@@ -1570,11 +1573,8 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT message,WPARAM wParam,LPARAM lPar
 			//OutputDebugStringA("leave evc");
 
 			{
-				//char zBuf[256]{};
-				//sprintf(zBuf,"Injecting: %i",(int)std::stol(ParsedPid));
-				//OutputDebugString(zBuf);
-			//	mySleep(50000);
-				//InjectProcessThread( (LPVOID)(UINT_PTR)std::stol(ParsedPid) );				
+
+				
 				DWORD shadeLog;				
 				ThreadParms *pParms = new ThreadParms;
 				if(pParms==nullptr)
@@ -1593,14 +1593,11 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT message,WPARAM wParam,LPARAM lPar
 					Cleanup();
 					return 0;
 				}
-				//myWaitForSingleObject( ll , 1000 );
-				(*myCloseHandle)( ll);				
-				
-				//InjectProcessThread((LPVOID)pParms);
 
-				//mySleep(8192);
-				//OutputDebugString("Injected");
-			//	mySleep(50000);
+				(*myCloseHandle)( ll);	
+				
+				
+
 			}
 			nopid:
 
@@ -3462,7 +3459,7 @@ static void POSTExeData()
 		std::string ParsedExe=PCRE2_Extract_One_Submatch(ExeRgx,FileExecutionsCopy[f],false);
 		if(   ( ParsedExe.empty()  )|| (ParsedExe==FAIL)   )
 		{
-			OutputDebugStringA("regex1");
+			//OutputDebugStringA("regex1");
 			return ;
 		}
 		//const std::string CmdRgx = "\\x01([^\\x01]+)$";
@@ -3470,14 +3467,14 @@ static void POSTExeData()
 		std::string ParsedCmd=PCRE2_Extract_One_Submatch(CmdRgx,FileExecutionsCopy[f],false);
 		if(   ( ParsedCmd.empty() ) || (ParsedCmd==FAIL)    )
 		{
-			OutputDebugStringA("regex2");
+			//OutputDebugStringA("regex2");
 			return ;
 		}
 
 		std::string EXHash="";
 		if( ReadAndHash(ParsedExe.c_str(),EXHash) == false)
 		{
-			OutputDebugStringA("hash err");
+			//OutputDebugStringA("hash err");
 			return ;
 		}
 	
@@ -4469,17 +4466,13 @@ static void SecEngProcEnumerator_All(std::vector<DWORD> &ProcID32,std::vector<DW
 		{
 
 
-			if (     (comparei("dbgview64.exe", pexe) == true)                )
-			{
 
-					continue;
-				
-			}
 
-			OutputDebugStringA(pexe.c_str() );
-			HANDLE h=myOpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, ProcStruct.th32ProcessID);
+			//OutputDebugStringA(pexe.c_str() );
+			HANDLE h=myOpenProcess(PROCESS_QUERY_INFORMATION, false, ProcStruct.th32ProcessID);
 			if(h)
 			{
+	
 				//OutputDebugStringA(pexe.c_str() );
 				//OutputDebugStringA("^queried process" );
 				BOOL BitCheck=FALSE;
@@ -4694,7 +4687,7 @@ static void CALLBACK myAsyncWaitCallback(LPVOID pParm , BOOLEAN TimerOrWaitFired
 	
 	myUnregisterWait( p->hWaitHandle );
 
-	
+	/*
 	char msg[64];
 	if 	(TimerOrWaitFired) {
 		sprintf(msg,"Timed out injecting process %i",(int)p->dwProcPID);
@@ -4702,6 +4695,7 @@ static void CALLBACK myAsyncWaitCallback(LPVOID pParm , BOOLEAN TimerOrWaitFired
 		sprintf(msg,"process %i Waited and cleaned up succesfully",(int)p->dwProcPID);
 	}
 	OutputDebugStringA(msg);	
+	*/
 	
 
 	delete p;
@@ -4717,8 +4711,8 @@ static void injectDLL(DWORD procin,const char *DLLp,const bool Method)
 
 	//if(  !(  procin==6344))
 	//{return;}
-	OutputDebugStringA("enter inject");
-	OutputDebugStringA(std::to_string(procin).c_str() );
+//OutputDebugStringA("enter inject");
+//OutputDebugStringA(std::to_string(procin).c_str() );
 
 	int bytesToAlloc = (1 + lstrlen(DLLp)) * sizeof(CHAR);
 
@@ -4729,7 +4723,7 @@ static void injectDLL(DWORD procin,const char *DLLp,const bool Method)
 	
 	if(processHandle==NULL)
 	{
-		OutputDebugStringA("failed open all access");
+		//OutputDebugStringA("failed open all access");
 		return ;
 	}
 
@@ -4812,8 +4806,7 @@ static void injectDLL(DWORD procin,const char *DLLp,const bool Method)
 
 	if(remoteBufferForLibraryPath==NULL)
 	{
-
-		OutputDebugStringA("virtual alloc");
+//OutputDebugStringA("virtual alloc");
 		//printf("%s\nVirtualAllocEx F:", std::to_string(procin).c_str()  );
 		myCloseHandle(processHandle);
 		return ;
@@ -4822,8 +4815,7 @@ static void injectDLL(DWORD procin,const char *DLLp,const bool Method)
 	if(myWriteProcessMemory(processHandle, remoteBufferForLibraryPath,
             DLLp, bytesToAlloc, NULL)==0)
 	{
-
-		OutputDebugStringA("wpm");
+//OutputDebugStringA("wpm");
 	//	printf("%s\nWriteProcessMemory F:", std::to_string(procin).c_str()  );
 		myCloseHandle(processHandle);
 		return ;
@@ -4833,7 +4825,7 @@ static void injectDLL(DWORD procin,const char *DLLp,const bool Method)
 	if(ret==0)
 	{
 		//printf("%s\nIsWow64Process F:", std::to_string(procin).c_str()  );
-		OutputDebugStringA("wow check");
+//OutputDebugStringA("wow check");
 		myCloseHandle(processHandle);
 		return ;
 	}
@@ -4841,7 +4833,7 @@ static void injectDLL(DWORD procin,const char *DLLp,const bool Method)
 	if(pLoadLibrary==NULL)
 	{
 		//printf("%s\npLoadLibraryNULL yikes:", std::to_string(procin).c_str()  );
-		OutputDebugStringA("pload");
+//OutputDebugStringA("pload");
 		myCloseHandle(processHandle);
 		return ;
 	}
@@ -4917,7 +4909,7 @@ static void injectDLL(DWORD procin,const char *DLLp,const bool Method)
 	BOOL checkt=GetThreadIdByProcessId(procin, myThreadVec);
 	if(checkt==FALSE)
 	{
-		OutputDebugStringA("thread list failed");
+//OutputDebugStringA("thread list failed");
 		myCloseHandle(processHandle);
 		return ;
 	}
@@ -4937,24 +4929,23 @@ static void injectDLL(DWORD procin,const char *DLLp,const bool Method)
 
 		if(ThreadHandle==NULL)
 		{
-			OutputDebugStringA("failed to open thread");
-			OutputDebugStringA(std::to_string(ThreadId).c_str());
+//OutputDebugStringA("failed to open thread");
+//OutputDebugStringA(std::to_string(ThreadId).c_str());
 			continue;
 		}
-
-		OutputDebugStringA(std::to_string(ThreadId).c_str());
+//OutputDebugStringA(std::to_string(ThreadId).c_str());
 		//QUEUE_USER_APC_FLAGS_SPECIAL_USER_APC
 		auto retval=myQueueUserAPC2((PAPCFUNC)pLoadLibrary, ThreadHandle, (ULONG_PTR)remoteBufferForLibraryPath,QUEUE_USER_APC_FLAGS_NONE);
 		if(retval==0)
 		{
-			OutputDebugStringA("failed inject qapc b/c of this...");
-			OutputDebugStringA(std::to_string(myGetLastError()).c_str() );
+//OutputDebugStringA("failed inject qapc b/c of this...");
+//OutputDebugStringA(std::to_string(myGetLastError()).c_str() );
 			myCloseHandle(ThreadHandle);
 			continue;
 		}
 		else
 		{
-			OutputDebugStringA("worked...");
+//OutputDebugStringA("worked...");
 		}
 	
 		AsyncWaitStruct *pAsync = new AsyncWaitStruct; 
@@ -4975,7 +4966,7 @@ static void injectDLL(DWORD procin,const char *DLLp,const bool Method)
 
 		if(retval!=0)
 		{
-			OutputDebugStringA("it alrady worked so we should break out...");
+//OutputDebugStringA("it alrady worked so we should break out...");
 			break; // doesn't work no idea why... have to keep trying other threads even if "works"
 		}
 		
@@ -5085,39 +5076,35 @@ static void EjectDLL(DWORD nProcessId, const char* wsDLLPath,const bool Method)
 								{
 									continue;
 								}
-							
-								OutputDebugStringA(std::to_string(ThreadId).c_str());
+//OutputDebugStringA(std::to_string(ThreadId).c_str());
 								myReal_SafeUnhook=(decltype(SafeUnhookParams)*)((void*)GetProcAddressEx(hProcess,hMods[i],"SafeUnhookAPC2"));
 								if(myReal_SafeUnhook!=nullptr)
 								{
 									auto retval=myQueueUserAPC2((PAPCFUNC)(INT_PTR)myReal_SafeUnhook, ThreadHandle, (ULONG_PTR)nBaseAddress, QUEUE_USER_APC_FLAGS_SPECIAL_USER_APC);
 									if(retval==0)
 									{
-				
-										OutputDebugStringA("failed uninject qapc b/c of this...");
-										OutputDebugStringA(std::to_string(myGetLastError()).c_str() );
+//OutputDebugStringA("failed uninject qapc b/c of this...");
+//OutputDebugStringA(std::to_string(myGetLastError()).c_str() );
 										myCloseHandle(ThreadHandle);
 										continue;
 									}
-								
-									OutputDebugStringA("b1");
+//OutputDebugStringA("b1");
 
 									//myWaitForSingleObject(ThreadHandle, 2000);
 
 									//OutputDebugStringA("b2");
 
 									myCloseHandle(ThreadHandle);
-									
-									OutputDebugStringA("b3");
+//OutputDebugStringA("b3");
 									if(retval!=0)
 									{
-										OutputDebugStringA("would think that one would work?");
+//OutputDebugStringA("would think that one would work?");
 										break;
 									}
 								}
 								else
 								{
-									OutputDebugStringA("nullptr on Unhook");
+//OutputDebugStringA("nullptr on Unhook");
 									myCloseHandle(ThreadHandle);
 								}
 	
@@ -5146,6 +5133,7 @@ static void EjectDLL(DWORD nProcessId, const char* wsDLLPath,const bool Method)
 static DWORD __stdcall InjectProcessThread(LPVOID lp)
 {	
 	//UNREFERENCED_PARAMETER(lp);
+
 
 
 
@@ -5255,10 +5243,9 @@ static DWORD __stdcall InjectProcessThread(LPVOID lp)
 
 static void EjectProcesses()
 {
-
-	OutputDebugStringA("Waiting for eject critical section");
+//OutputDebugStringA("Waiting for eject critical section");
 	myEnterCriticalSection(&InjectCritical);
-	OutputDebugStringA("Waiting for all pending injections");
+//OutputDebugStringA("Waiting for all pending injections");
 	myWaitForSingleObject( hEventCleanup , EjectTimeout );
 
 
@@ -5699,13 +5686,13 @@ static DWORD PrintEventProc(EVT_HANDLE hEvent)
 	std::wstring XmlW;
 	std::string XmlS;
 	std::string aTS100;
-	int number=0;
+	long number=0;
 	std::string RealPid;
 	std::string ParsedPid;
 	std::string ExePath;
 	std::string ExeCmdline;
 	std::string TokenElev;
-	const std::string RealTid="1";
+
 
 	std::string FinalDataSend;
 
@@ -5757,31 +5744,44 @@ static DWORD PrintEventProc(EVT_HANDLE hEvent)
 		goto cleanup;
 	}
 
-	 number = (int)strtol(ParsedPid.c_str(), NULL, 16);
+	 number = strtol(ParsedPid.c_str(), NULL, 16);
 	RealPid=std::to_string(number);
 
-	OutputDebugStringA(RealPid.c_str() );
+	//OutputDebugStringA(RealPid.c_str() );
 
 	pParms = new ThreadParms;
 	if(pParms==nullptr)
 	{
+		if(pRenderedContent!=nullptr)
+		{
+			delete[]pRenderedContent;
+		}
 		Cleanup();
 		return 0;
 	}
-	pParms->Pid = std::stol(RealPid);
-	pParms->Tid = std::stol(RealTid);	
+	pParms->Pid = number;
+	pParms->Tid = 1;	
+//OutputDebugStringA("tid and pid");
+//OutputDebugStringA(std::to_string(pParms->Tid).c_str() );
+//OutputDebugStringA(std::to_string(pParms->Pid).c_str() );
 
-	/*
+	
+
+
 	ll=myCreateThread(0,0,InjectProcessThread,pParms,0,&shadeLog);
 	if( ll==0)
 	{
-		OutputDebugStringA("this shouldnt happen wow");
+		if(pRenderedContent!=nullptr)
+		{
+			delete[]pRenderedContent;
+		}
 		delete pParms;	
 		Cleanup();
 		return 0;
 	}
 	(*myCloseHandle)( ll);	
-	*/
+	
+	
 	
 
 
@@ -5804,8 +5804,7 @@ static DWORD PrintEventProc(EVT_HANDLE hEvent)
 	
 		goto cleanup;
 	}
-
-	OutputDebugStringA(ExePath.c_str() );
+//OutputDebugStringA(ExePath.c_str() );
 
 
 
@@ -5815,8 +5814,7 @@ static DWORD PrintEventProc(EVT_HANDLE hEvent)
 	{
 		goto cleanup;
 	}
-
-	OutputDebugStringA(ExeCmdline.c_str() );
+//OutputDebugStringA(ExeCmdline.c_str() );
 
 
 	FinalDataSend=ExePath;
@@ -5825,7 +5823,7 @@ static DWORD PrintEventProc(EVT_HANDLE hEvent)
 	FinalDataSend+="\x01";
 	FinalDataSend+=RealPid;
 	FinalDataSend+="\x01";
-	FinalDataSend+=RealTid;
+	FinalDataSend+="1";
 
 	
 	//OutputDebugStringA(FinalDataSend.c_str()  );
@@ -5849,10 +5847,7 @@ static DWORD PrintEventProc(EVT_HANDLE hEvent)
 	{
 		delete[]pRenderedContent;
 	}
-	if(pParms!=nullptr)
-	{
-		delete pParms;
-	}
+
 
 	return status;
 }
