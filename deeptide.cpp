@@ -43,7 +43,7 @@
 #include "resource.h"
 #define PCRE2_STATIC
 #define PCRE2_CODE_UNIT_WIDTH 8
-#include "C:/pcre2-10.40/src/pcre2.h"
+#include "C:/pcre2-10.42/src/pcre2.h"
 #include "C:/curl-7.86.0/include/curl/curl.h"
 
 #define MAX_KEY_LENGTH 255
@@ -99,7 +99,7 @@ static bool FirstRegHCKU=true;
 
 static std::string DeviceForC="";
 
-static const char VER_STRING[]="20221203c";
+static const char VER_STRING[]="20221214a";
 
 static const char UN_FULL[]="^\\x5cDevice\\x5cHarddiskVolume\\d+\\x5cprogramdata\\x5carcticmyst\\x5cunins000\\x2eexe$";
 static const char UN_SHORT[]="unins000.exe";
@@ -2197,7 +2197,7 @@ static void Cleanup()
 
 	if(FreeWolf==true)
 	{
-		myDeleteCriticalSection(&WolfCritical);
+	//	myDeleteCriticalSection(&WolfCritical);
 	}
 
 		
@@ -2210,7 +2210,7 @@ static void Cleanup()
 
 	if(FreeCurlCS==true)
 	{
-		myDeleteCriticalSection(&CurlCritical);
+	//	myDeleteCriticalSection(&CurlCritical);
 	}
 
 
@@ -2228,7 +2228,7 @@ static void Cleanup()
 
 	if(FreeMarshall==true)
 	{
-		(**myDeleteCriticalSection)(&MarshallVolatilitySection);
+	//	(**myDeleteCriticalSection)(&MarshallVolatilitySection);
 	}
 
 
@@ -2238,14 +2238,14 @@ static void Cleanup()
 
 	if(FreeBalloon==true)
 	{
-		(*****myDeleteCriticalSection)(&BalloonCritical);
+	//	(*****myDeleteCriticalSection)(&BalloonCritical);
 	}
 
 
 
 	if(FreeAttack==true)
 	{
-		(*****myDeleteCriticalSection)(&AttackCritical);
+	//	(*****myDeleteCriticalSection)(&AttackCritical);
 	}
 
 
@@ -2253,26 +2253,26 @@ static void Cleanup()
 
 	if(FreeGUICrypto==true)
 	{
-		myDeleteCriticalSection(&GUICryptoCritical);
+	//	myDeleteCriticalSection(&GUICryptoCritical);
 	}
 
 
 
 	if(FreeInject==true)
 	{
-		myDeleteCriticalSection(&InjectCritical);
+	//	myDeleteCriticalSection(&InjectCritical);
 	}
 
 	if(FreeExeVector==true)
 	{
 
-		myDeleteCriticalSection(&ExeVectorCritical);
+	//	myDeleteCriticalSection(&ExeVectorCritical);
 	}
 
 	if(FreeLog==true)
 	{
 
-		myDeleteCriticalSection(&LogMessageCS);
+	//	myDeleteCriticalSection(&LogMessageCS);
 	}
 
 	
@@ -2286,7 +2286,7 @@ static void Cleanup()
 	if(FreeCleanupCS==true)
 	{
 		myLeaveCriticalSection(&CleanupCritical);
-		myDeleteCriticalSection(&CleanupCritical);
+	//	myDeleteCriticalSection(&CleanupCritical);
 	}
 
 

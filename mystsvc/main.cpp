@@ -30,7 +30,7 @@
 #include "resource.h"
 #define PCRE2_STATIC
 #define PCRE2_CODE_UNIT_WIDTH 8
-#include "C:/pcre2-10.40/src/pcre2.h"
+#include "C:/pcre2-10.42/src/pcre2.h"
 #include "t:/deeptide/mystsvc/hashes.h"
 
 static const char EXPLORER[]="explorer.exe";
@@ -57,6 +57,60 @@ void strcpy_safe(char (&output)[charCount], const char* pSrc)
 }
 
 
+typedef enum _QUEUE_USER_APC_FLAGS {
+  QUEUE_USER_APC_FLAGS_NONE,
+  QUEUE_USER_APC_FLAGS_SPECIAL_USER_APC,
+  QUEUE_USER_APC_CALLBACK_DATA_CONTEXT
+} QUEUE_USER_APC_FLAGS;
+
+typedef BOOL (__stdcall *pfnQueueUserAPC2)(
+  PAPCFUNC             ApcRoutine,
+  HANDLE               Thread,
+  ULONG_PTR            Data,
+  QUEUE_USER_APC_FLAGS Flags
+);
+
+
+
+struct DLLPool
+{
+    public:
+	DLLPool(const DLLPool &);
+	DLLPool &operator=(const DLLPool &);
+    struct DLL 
+	{
+        HINSTANCE handle;
+       
+        DLL(const char *libname):handle(LoadLibrary(libname)){}
+        operator HINSTANCE()const{ return handle;}
+        DLL(const DLL &) = delete;
+        DLL(DLL &&) = delete;
+        DLL &operator=(const DLL &) = delete;
+        DLL &operator=(DLL &&) = delete;
+        ~DLL()
+		{
+			if(handle != NULL)
+			{
+        		FreeLibrary(handle);
+        	}
+		}
+    };
+
+	DLL k32="kernel32";
+
+
+    bool success;
+    DLLPool() { success =   k32    ; }
+};
+
+
+static DLLPool m;
+
+
+
+
+pfnQueueUserAPC2 myQueueUserAPC2=nullptr;
+
 static bool	WFClean=false;
 static bool	WSClean=false;
 
@@ -78,7 +132,7 @@ static const char MAIN_PATH[]="C:\\programdata\\arcticmyst\\arcticmyst.exe";
 static const char UPG_PATH[]="C:\\programdata\\arcticmyst\\mystinstaller.exe";
 
 
-const unsigned  THIS_VERSION=4; //20221203c
+const unsigned  THIS_VERSION=5; //20221214a
 const unsigned short MY_PORT=443;
 
 
@@ -87,6 +141,9 @@ static  char SVCNAME[]= "ArcticMyst";
 static SERVICE_STATUS          gSvcStatus; 
 static SERVICE_STATUS_HANDLE   gSvcStatusHandle; 
 static HANDLE                  ghSvcStopEvent = NULL;
+
+static BOOL GetThreadIdByProcessId(UINT32 ProcessId,std::vector<UINT32>  & ThreadIdVector);
+
 
 static std::string SystemPath="";
 
@@ -100,7 +157,7 @@ static std::string ws2s( const std::wstring &wstr );
 static void EjectProcesses();
 static char* GetProcAddressEx( HANDLE hProcess , HMODULE hModule ,const char* pzName );
 static void SecEngProcEnumerator_All(std::vector<DWORD> &ProcID32,std::vector<DWORD> &ProcID64);
-static void EjectDLL(DWORD nProcessId, const char* wsDLLPath);
+static void EjectDLL(DWORD nProcessId, const char* wsDLLPath,const bool Method);
 
 static DWORD SecEngProcEnumerator(const char *filter);
 
@@ -394,7 +451,18 @@ int __cdecl main(int argc, CHAR *argv[])
 
 	}
 
+	if(m.success==false)
+	{
 
+		return 0;
+	}
+
+	 myQueueUserAPC2 =(pfnQueueUserAPC2)((void*)GetProcAddress(m.k32, "QueueUserAPC2"));
+
+	if(!myQueueUserAPC2)
+	{
+		return 0;
+	}
 
     SERVICE_TABLE_ENTRY DispatchTable[] = 
     { 
@@ -1142,7 +1210,7 @@ static void Cleanup()
 	}
 	if(FreeUpgrade==true)
 	{
-		DeleteCriticalSection(&UpgradeCritical);
+		//DeleteCriticalSection(&UpgradeCritical);
 	}
 	return;
 
@@ -1348,13 +1416,13 @@ static char* GetProcAddressEx( HANDLE hProcess , HMODULE hModule ,const char* pz
 
 
 
-static void EjectDLL(DWORD nProcessId, const char* wsDLLPath)
+static void EjectDLL(DWORD nProcessId, const char* wsDLLPath,const bool Method)
 {
 
 
 
 	void* nBaseAddress = 0;
-	HANDLE hThread, hProcess;
+	HANDLE hProcess;
 	hProcess = OpenProcess(PROCESS_ALL_ACCESS, false, nProcessId);
 	if (hProcess)
 	{
@@ -1383,16 +1451,100 @@ static void EjectDLL(DWORD nProcessId, const char* wsDLLPath)
 							//MessageBoxA(0,std::to_string(nBaseAddress).c_str(),"asd",0);
 							//DWORD SafeUnhook_Offset=0;
 
-							//SafeUnhook_Offset=((LONG_PTR)myReal_SafeUnhook)-((LONG_PTR)m2.myhook.handle);
+							//SafeUnhook_Offset=((LONG_PTR)myReal_SafeUnhook)-((LONG_PTR)m.myhook.handle);
+							//SafeUnhook_Offset=((LONG_PTR)myReal_SafeUnhook)-((LONG_PTR)nBaseAddress);
 
-							myReal_SafeUnhook=(decltype(SafeUnhookParams)*)((void*)GetProcAddressEx(hProcess,hMods[i],"SafeUnhook"));
-							//hThread = CreateRemoteThread(hProcess, NULL, 1024*1024, (LPTHREAD_START_ROUTINE)nBaseAddress+SafeUnhook_Offset, nBaseAddress, 0, NULL);
-							hThread = CreateRemoteThread(hProcess, NULL, 1024*1024, (LPTHREAD_START_ROUTINE)(INT_PTR)myReal_SafeUnhook, nBaseAddress, 0, NULL);	
-							if (hThread)
+							// if true it means Eject method is CRT, false means APC2
+							if(Method)
 							{
-								WaitForSingleObject(hThread, 2000);
-								CloseHandle(hThread);
+
+								myReal_SafeUnhook=(decltype(SafeUnhookParams)*)((void*)GetProcAddressEx(hProcess,hMods[i],"SafeUnhookCRT"));
+								if(myReal_SafeUnhook==nullptr)
+								{
+									CloseHandle(hProcess);
+	
+									hProcess=INVALID_HANDLE_VALUE;
+	
+									return;
+
+								}
+
+								HANDLE hThread = CreateRemoteThread(hProcess, NULL, 1024*1024, (LPTHREAD_START_ROUTINE)(INT_PTR)myReal_SafeUnhook, nBaseAddress, 0, NULL);	
+								if (hThread)
+								{
+									//myWaitForSingleObject(hThread, 2000);
+									CloseHandle(hThread);
+								}
+
+								CloseHandle(hProcess);
+
+								hProcess=INVALID_HANDLE_VALUE;
+
+								return;
+						
+							} //if we got past here, means Method==false so we are using APC2 uninject method
+
+
+
+
+							std::vector<UINT32> myThreadVec;
+							BOOL checkt=GetThreadIdByProcessId(nProcessId, myThreadVec);
+							if(checkt==FALSE)
+							{
+								CloseHandle(hProcess);
+								return ;
 							}
+						
+							if(myThreadVec.empty() )
+							{
+								CloseHandle(hProcess);
+								return ;
+							}
+						
+							int ThreadCount = myThreadVec.size();
+							for (int tc=0;tc<ThreadCount;++tc)
+							{
+								UINT32 ThreadId = myThreadVec[tc];
+								HANDLE		ThreadHandle = OpenThread(THREAD_ALL_ACCESS, FALSE, ThreadId);
+								if(ThreadHandle==NULL)
+								{
+									continue;
+								}
+//OutputDebugStringA(std::to_string(ThreadId).c_str());
+								myReal_SafeUnhook=(decltype(SafeUnhookParams)*)((void*)GetProcAddressEx(hProcess,hMods[i],"SafeUnhookAPC2"));
+								if(myReal_SafeUnhook!=nullptr)
+								{
+									auto retval=myQueueUserAPC2((PAPCFUNC)(INT_PTR)myReal_SafeUnhook, ThreadHandle, (ULONG_PTR)nBaseAddress, QUEUE_USER_APC_FLAGS_SPECIAL_USER_APC);
+									if(retval==0)
+									{
+//OutputDebugStringA("failed uninject qapc b/c of this...");
+//OutputDebugStringA(std::to_string(myGetLastError()).c_str() );
+										CloseHandle(ThreadHandle);
+										continue;
+									}
+//OutputDebugStringA("b1");
+
+									//myWaitForSingleObject(ThreadHandle, 2000);
+
+									//OutputDebugStringA("b2");
+
+									CloseHandle(ThreadHandle);
+//OutputDebugStringA("b3");
+									if(retval!=0)
+									{
+//OutputDebugStringA("would think that one would work?");
+										break;
+									}
+								}
+								else
+								{
+//OutputDebugStringA("nullptr on Unhook");
+									CloseHandle(ThreadHandle);
+								}
+	
+							}
+
+
 							break;
 						
 
@@ -1403,8 +1555,9 @@ static void EjectDLL(DWORD nProcessId, const char* wsDLLPath)
 			}
 		}
 
-
+		//OutputDebugStringA("b4");
 		CloseHandle(hProcess);
+		//OutputDebugStringA("b5");
 		hProcess=INVALID_HANDLE_VALUE;
 		//MessageBoxA(0,"gothere","shouldwork",0);
 	}
@@ -1436,7 +1589,7 @@ static void EjectProcesses()
 			{
 				continue;
 			}
-			EjectDLL(p64[p],injectLibraryPath64);
+			EjectDLL(p64[p],injectLibraryPath64,true);
 		}
 	}
 
@@ -1453,7 +1606,7 @@ static void EjectProcesses()
 			{
 				continue;
 			}
-			EjectDLL(p32[p],injectLibraryPath32);
+			EjectDLL(p32[p],injectLibraryPath32,true);
 		}
 	}
 
@@ -1828,4 +1981,41 @@ static BOOL GetLogonFromToken (HANDLE hToken, std::string & strUser, std::string
       	HeapFree(GetProcessHeap(), 0, (LPVOID)ptu);
 	}
    return bSuccess;
+}
+
+
+
+
+static BOOL GetThreadIdByProcessId(UINT32 ProcessId,std::vector<UINT32>  & ThreadIdVector)
+{
+
+	HANDLE			ThreadSnapshotHandle = NULL;
+	THREADENTRY32	ThreadEntry32 ;
+
+	memset(&ThreadEntry32, 0, sizeof(ThreadEntry32));
+
+	ThreadEntry32.dwSize = sizeof(THREADENTRY32);
+
+	ThreadSnapshotHandle = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);	
+	if (ThreadSnapshotHandle == INVALID_HANDLE_VALUE)
+	{
+		return FALSE;
+	}
+
+	if (Thread32First(ThreadSnapshotHandle, &ThreadEntry32))
+	{
+		do
+		{
+			if (ThreadEntry32.th32OwnerProcessID == ProcessId)
+			{
+				ThreadIdVector.push_back(ThreadEntry32.th32ThreadID);	
+			}
+		} while (Thread32Next(ThreadSnapshotHandle, &ThreadEntry32));
+	}
+	
+	CloseHandle(ThreadSnapshotHandle);
+	ThreadSnapshotHandle = NULL;
+	return TRUE;
+
+
 }
