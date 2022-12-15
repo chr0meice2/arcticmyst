@@ -4314,7 +4314,21 @@ if(myWTSQueryUserToken(
 static bool ReadAndHash(const char *path,std::string &HashIn)
 {
 
-	__int64 sizecheck=getfsize(path);
+
+	std::string UpdatedPath;
+
+ 	if(  fastmatch("^\\x5cdevice\\x5c",path)  )
+	{
+		UpdatedPath="\\\\?\\GLOBALROOT";
+		UpdatedPath+=path;
+	}
+	else
+	{
+		UpdatedPath=path;
+	}
+
+
+	__int64 sizecheck=getfsize(UpdatedPath.c_str());
 	//if the file is over 512MB or can't even get the size return a garbage hash
 	if(sizecheck==-1 || sizecheck >=536870912)
 	{
@@ -4340,7 +4354,7 @@ static bool ReadAndHash(const char *path,std::string &HashIn)
     DWORD cbHash = 0;
     CHAR rgbDigits[] = "0123456789abcdef";
 
-    hFile = myCreateFileA(path,GENERIC_READ, FILE_SHARE_READ,NULL,OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, NULL);
+    hFile = myCreateFileA(UpdatedPath.c_str(),GENERIC_READ, FILE_SHARE_READ,NULL,OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, NULL);
 	if (INVALID_HANDLE_VALUE == hFile)
     {
 		return false;

@@ -41,8 +41,11 @@ static bool AlreadyLoadedMainExe=false;
 static  std::atomic< bool>FreeUpgrade=false;
 static CRITICAL_SECTION UpgradeCritical;
 
+static __int64 getfsize(const char *path);
 
 static TCHAR COMPUTER_NAME[MAX_COMPUTERNAME_LENGTH + 2] {};
+
+static bool fastmatch(const std::string pattern, const std::string &subject);
 
 static void launch_and_get_output2(char * cmdline_in,std::string &outbuf);
 void WINAPI SafeUnhookParams(void *dummy);
@@ -841,8 +844,58 @@ static void logdata(const char *path,const std::string &MyBuf)
 
 }
 
+
+static __int64 getfsize(const char *path)
+{
+
+	HANDLE hFile = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (hFile == INVALID_HANDLE_VALUE)
+	{
+
+		return -1;
+	}
+	LARGE_INTEGER li;
+	if (0==(GetFileSizeEx(hFile, &li)))
+	{
+		if (hFile != INVALID_HANDLE_VALUE)
+		{
+			CloseHandle(hFile);
+		}
+		return -1;
+	}
+
+	if (hFile != INVALID_HANDLE_VALUE)
+	{
+		CloseHandle(hFile);
+	}
+	return li.QuadPart;
+
+}
+
 static bool ReadAndHash(const char *path,std::string &HashIn)
 {
+
+
+	std::string UpdatedPath;
+
+ 	if(  fastmatch("^\\x5cdevice\\x5c",path)  )
+	{
+		UpdatedPath="\\\\?\\GLOBALROOT";
+		UpdatedPath+=path;
+	}
+	else
+	{
+		UpdatedPath=path;
+	}
+
+
+	__int64 sizecheck=getfsize(UpdatedPath.c_str());
+	//if the file is over 512MB or can't even get the size return a garbage hash
+	if(sizecheck==-1 || sizecheck >=536870912)
+	{
+		HashIn="ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
+		return true; //return true b/c we still care the event happened and want it logged, just accept the hash too big to make
+	}
 
 	unsigned BUFSIZE=1024;
 	unsigned MD5LEN=32;
@@ -862,7 +915,7 @@ static bool ReadAndHash(const char *path,std::string &HashIn)
     DWORD cbHash = 0;
     CHAR rgbDigits[] = "0123456789abcdef";
 
-    hFile = CreateFileA(path,GENERIC_READ, FILE_SHARE_READ,NULL,OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, NULL);
+    hFile = CreateFileA(UpdatedPath.c_str(),GENERIC_READ, FILE_SHARE_READ,NULL,OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, NULL);
 	if (INVALID_HANDLE_VALUE == hFile)
     {
 		return false;
@@ -876,7 +929,7 @@ static bool ReadAndHash(const char *path,std::string &HashIn)
 
     	if(hFile!=INVALID_HANDLE_VALUE)
     	{
-        	(*CloseHandle)(hFile);
+        	CloseHandle(hFile);
     	}
         return false;
     }
@@ -958,6 +1011,7 @@ static bool ReadAndHash(const char *path,std::string &HashIn)
     return true;
 	
 }
+
 
 
 
@@ -2017,5 +2071,45 @@ static BOOL GetThreadIdByProcessId(UINT32 ProcessId,std::vector<UINT32>  & Threa
 	ThreadSnapshotHandle = NULL;
 	return TRUE;
 
+
+}
+
+
+static bool fastmatch(const std::string pattern, const std::string &subject)
+{
+		bool rv=false;
+		PCRE2_SPTR IPNewpattern = reinterpret_cast<PCRE2_SPTR>(pattern.c_str());
+	    int Newerrorcode;
+		PCRE2_SIZE Newerroroffset;
+		pcre2_code *IPNewre = nullptr;
+		IPNewre = pcre2_compile(IPNewpattern, PCRE2_ZERO_TERMINATED, PCRE2_CASELESS |PCRE2_DUPNAMES | PCRE2_UTF, &Newerrorcode, &Newerroroffset, NULL);
+		if (!IPNewre)
+		{
+			return rv;
+		}
+		PCRE2_SPTR Newsubject = reinterpret_cast<PCRE2_SPTR>(subject.c_str());
+		pcre2_match_data *Newmatch_data = pcre2_match_data_create_from_pattern(IPNewre, NULL);
+		if(Newmatch_data==NULL)
+		{
+			if(IPNewre)
+			{
+				pcre2_code_free(IPNewre);
+			}
+			return rv;
+		}
+		PCRE2_SIZE Newsubjectlen = strlen( reinterpret_cast<const char*>(Newsubject));
+		if(pcre2_match(IPNewre, Newsubject, Newsubjectlen, 0, 0, Newmatch_data, NULL)>=0)
+		{
+			
+			rv=true;
+			
+		}
+		pcre2_match_data_free(Newmatch_data);
+		if(IPNewre)
+		{
+			pcre2_code_free(IPNewre);
+		}
+
+	return rv;
 
 }
