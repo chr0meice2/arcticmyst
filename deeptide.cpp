@@ -1548,7 +1548,9 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT message,WPARAM wParam,LPARAM lPar
 			if(   ( ParsedPid.empty()  )|| (ParsedPid==FAIL)   )
 			{
 		
-				goto nopid;
+   				SecureZeroMemory(pEncryptedText.data(), pcds->cbData );
+    			pEncryptedText.clear();
+				break;
 			}
 
 
@@ -1556,7 +1558,9 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT message,WPARAM wParam,LPARAM lPar
 			if(   ( ParsedTid.empty()  )|| (ParsedTid==FAIL)   )
 			{
 		
-				goto nopid;
+   				SecureZeroMemory(pEncryptedText.data(), pcds->cbData );
+    			pEncryptedText.clear();
+				break;
 			}
 
 
@@ -1571,11 +1575,28 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT message,WPARAM wParam,LPARAM lPar
 			myLeaveCriticalSection(&LogMessageCS);
 
 
+
+			std::string copyp=pEncryptedText.c_str();
+			copyp+="\x01"; //add inject flag
+			copyp+="i";
+			
 			//OutputDebugStringA("enter evc");
 			myEnterCriticalSection(&ExeVectorCritical);
-			FileExecutions.push_back(    pEncryptedText .data()   );
+			FileExecutions.push_back(    copyp  );
 			myLeaveCriticalSection(&ExeVectorCritical);
 			//OutputDebugStringA("leave evc");
+
+
+   			SecureZeroMemory(pEncryptedText.data(), pcds->cbData  );
+
+
+
+   			SecureZeroMemory(copyp.data(), copyp.size()  );
+			
+			
+    		pEncryptedText.clear();
+			copyp.size();
+
 
 			{
 
@@ -1604,10 +1625,9 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT message,WPARAM wParam,LPARAM lPar
 				
 
 			}
-			nopid:
 
-   			SecureZeroMemory(pEncryptedText.data(), pcds->cbData );
-    		pEncryptedText.clear();
+
+
 
 			//OutputDebugStringA("all done");
 
@@ -3460,21 +3480,35 @@ static void POSTExeData()
 	{
 
 		//OutputDebugStringA("enter fec copy loop");
-		const std::string ExeRgx = "^([^\\x01]+)\\x01[^\\x01]+\\x01\\d{1,10}\\x01\\d{1,10}$";
+		const std::string ExeRgx = "^([^\\x01]+)\\x01[^\\x01]+\\x01\\d{1,10}\\x01\\d{1,10}\\x01[ie]$";
 		std::string ParsedExe=PCRE2_Extract_One_Submatch(ExeRgx,FileExecutionsCopy[f],false);
 		if(   ( ParsedExe.empty()  )|| (ParsedExe==FAIL)   )
 		{
-			//OutputDebugStringA("regex1");
+
 			return ;
 		}
 		//const std::string CmdRgx = "\\x01([^\\x01]+)$";
-		const std::string CmdRgx = "^[^\\x01]+\\x01([^\\x01]+)\\x01\\d{1,10}\\x01\\d{1,10}$";
+		const std::string CmdRgx = "^[^\\x01]+\\x01([^\\x01]+)\\x01\\d{1,10}\\x01\\d{1,10}\\x01[ie]$";
 		std::string ParsedCmd=PCRE2_Extract_One_Submatch(CmdRgx,FileExecutionsCopy[f],false);
 		if(   ( ParsedCmd.empty() ) || (ParsedCmd==FAIL)    )
 		{
 			//OutputDebugStringA("regex2");
 			return ;
 		}
+
+		const std::string HowRgx = "^[^\\x01]+\\x01[^\\x01]+\\x01\\d{1,10}\\x01\\d{1,10}\\x01([ie])$";
+		std::string ParsedHow=PCRE2_Extract_One_Submatch(HowRgx,FileExecutionsCopy[f],false);
+		if(   ( ParsedHow.empty() ) || (ParsedHow==FAIL)    )
+		{
+			//OutputDebugStringA("regex2");
+			return ;
+		}
+
+		if(! (ParsedHow=="i" || ParsedHow=="e")   )
+		{
+			return ;
+		}
+
 
 		std::string EXHash="";
 		if( ReadAndHash(ParsedExe.c_str(),EXHash) == false)
@@ -3513,8 +3547,15 @@ static void POSTExeData()
 	
 		//msgs
 
-	
-		std::string ainput="New EXE launched detected via NtCreateUserProcess hook->\r\n\r\n";
+		std::string ainput="New process launched detected via ";
+		if(ParsedHow=="i")
+		{
+			ainput+="NtCreateUserProcess DLL injection hook method->\r\n\r\n";
+		}
+		else  //must be "e" since we already verified above
+		{
+			ainput+="Event Log callback method since evelated process->\r\n\r\n";
+		}
 		ainput+=ParsedExe;
 		ainput+="\r\n\r\nCommand line data->\r\n\r\n";
 		ainput+=ParsedCmd;
@@ -5713,6 +5754,7 @@ static DWORD PrintEventProc(EVT_HANDLE hEvent)
 	std::string TokenElev;
 
 
+
 	std::string FinalDataSend;
 
 	DWORD shadeLog;				
@@ -5844,11 +5886,17 @@ static DWORD PrintEventProc(EVT_HANDLE hEvent)
 	FinalDataSend+="\x01";
 	FinalDataSend+="1";
 
+	FinalDataSend+="\x01";
+	FinalDataSend+="e";
+
+
+
+
 	
 	//OutputDebugStringA(FinalDataSend.c_str()  );
 	
 	myEnterCriticalSection(&ExeVectorCritical);
-	FileExecutions.push_back(    FinalDataSend .data()   );
+	FileExecutions.push_back(    FinalDataSend  );
 	myLeaveCriticalSection(&ExeVectorCritical);
 
 	
