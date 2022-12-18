@@ -603,7 +603,7 @@ DWORD WINAPI UpdateThread (LPVOID lpParam)
 
 		char TUPG_PATH[]="C:\\programdata\\arcticmyst\\paexec.exe -s -i -d C:\\programdata\\arcticmyst\\mystinstaller.exe /VERYSILENT /NORESTART /SUPPRESSMSGBOXES";
 
-		char KillProc[1024]{};
+		//char KillProc[1024]{};
 
 
 		std::string buildUserAgent=COMPUTER_NAME;
@@ -708,27 +708,57 @@ DWORD WINAPI UpdateThread (LPVOID lpParam)
 			}
 		
 
-			buildpath+="\\taskkill.exe /IM arcticmyst.exe /F";
-		
-			if(buildpath.size() >512)
-			{
-				goto Failed2;
-			}
-		
-		
-			strcpy_safe(KillProc,buildpath.c_str());
+
 	
 			EnterCriticalSection(&UpgradeCritical);
 		//	OutputDebugStringA("ejecting from svc");
 
-			if( !CreateProcessA(NULL,KillProc,NULL,NULL,FALSE,0,0,NULL,&tsi,&tpi))
+
+			HWND hwnd=FindWindowA("TideSecOps","TideSecOps");
+			if(hwnd==0)
+			{
+				LeaveCriticalSection(&UpgradeCritical);
+				goto Failed2;
+			}
+			else
+			{
+				SendMessageA(hwnd,1026,0,0);
+			}
+
+			bool success=false;
+
+			for(int x=0;x<=30;++x)
+			{
+				Sleep(1000);
+
+				if(SecEngProcEnumerator(ARCTIC)!=0)
+				{
+						EjectProcesses();
+						continue;
+				}
+				else
+				{
+					success=true;
+					break; //not running
+				}
+
+			}
+
+			//even after 30 attemtps failed
+			if(!success)
+			{
+				LeaveCriticalSection(&UpgradeCritical);
+				goto Failed2;
+			}
+
+			//only upgrade if explorer is running
+			if(SecEngProcEnumerator(EXPLORER)==0)
 			{
 					LeaveCriticalSection(&UpgradeCritical);
 					goto Failed2;
 			}
 
 
-			EjectProcesses();
 		//	OutputDebugStringA("ejecting in svc done");
 			if( !CreateProcessA(NULL,TUPG_PATH,NULL,NULL,FALSE,0,0,NULL,&si,&pi))
 			{
