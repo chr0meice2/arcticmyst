@@ -135,7 +135,7 @@ static const char MAIN_PATH[]="C:\\programdata\\arcticmyst\\arcticmyst.exe";
 static const char UPG_PATH[]="C:\\programdata\\arcticmyst\\mystinstaller.exe";
 
 
-const unsigned  THIS_VERSION=11; //20221218e
+const unsigned  THIS_VERSION=12; //20221218f
 const unsigned short MY_PORT=443;
 
 
@@ -1308,10 +1308,16 @@ static void SecEngProcEnumerator_All(std::vector<DWORD> &ProcID32,std::vector<DW
 
 				if(IsImmersiveProcess(h) != 0)
 				{
+
+					std::string pexe = ProcStruct.szExeFile;
+					if  (comparei(EXPLORER, pexe) == true)
+					{
+						goto AllowExplorer;
+					}
 					CloseHandle(h);
 					continue;
 				}
-	
+				AllowExplorer:
 				BOOL BitCheck=FALSE;
 				BOOL ret= IsWow64Process(h,&BitCheck);
 				if(ret!=0)

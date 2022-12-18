@@ -109,7 +109,7 @@ static bool FirstRegHCKU=true;
 
 static std::string DeviceForC="";
 
-static const char VER_STRING[]="20221218e";
+static const char VER_STRING[]="20221218f";
 
 static const char UN_FULL[]="^\\x5cDevice\\x5cHarddiskVolume\\d+\\x5cprogramdata\\x5carcticmyst\\x5cunins000\\x2eexe$";
 static const char UN_SHORT[]="unins000.exe";
@@ -401,6 +401,8 @@ typedef BOOL (__stdcall *pfnQueueUserAPC2)(
   ULONG_PTR            Data,
   QUEUE_USER_APC_FLAGS Flags
 );
+
+
 
 static decltype(IsImmersiveProcess) *myIsImmersiveProcess=nullptr;
 
@@ -723,6 +725,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		return 0;
 	}
 
+
+
 	myIsImmersiveProcess=(decltype(IsImmersiveProcess)*)((void*)GetProcAddress(m.us32,"IsImmersiveProcess"));
 	myDestroyWindow=(decltype(DestroyWindow)*)((void*)GetProcAddress(m.us32,"DestroyWindow"));
 	myExitThread=(decltype(ExitThread)*)((void*)GetProcAddress(m.k32,"ExitThread"));
@@ -901,7 +905,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	ptrShell_NotifyIconA=(decltype(Shell_NotifyIconA)*)((void*)GetProcAddress(m.sh32,"Shell_NotifyIconA"));
 
 
-	if(!  (myDestroyWindow&&myExitThread&&myTerminateProcess&&myPostQuitMessage&&myResetEvent&&mySetEvent&&myRegSetValueExA&&myQueueUserAPC2&&myThread32First&&myThread32Next&&myExitProcess&&myEvtClose&&myEvtSubscribe&&myEvtRender&&myGetFileSizeEx&&myGetUserNameExA&&myGetUserNameA&&myWideCharToMultiByte&&ptrSHGetKnownFolderPath&&ptrCoTaskMemFree&&myCreatePipe&&myGetExitCodeProcess&&mySetHandleInformation&&myGetStdHandle&&myOpenThread&&myResumeThread&&myRegisterWaitForSingleObject&&myUnregisterWait&&myQueryDosDeviceA&&myGetProcessImageFileNameA&&myChangeWindowMessageFilterEx&&myclosesocket && myVirtualFreeEx && myCryptUnprotectMemory&&myGetModuleInformation&&myGetExitCodeThread&&myCreateRemoteThread&&myWriteProcessMemory && myVirtualAllocEx&&myEnumProcessModulesEx&& myGetModuleFileNameExA && myReal_LoadLibraryA && myReadProcessMemory && myIsWow64Process && myCreateFileA && myReadFile && myCryptAcquireContextA && myCryptCreateHash && myCryptDestroyHash && myCryptGetHashParam && myCryptHashData && myCryptReleaseContext && myWTSQueryUserToken && myProcessIdToSessionId && myCreateProcessAsUserA && myGetShellWindow && myGetWindowThreadProcessId && myInitializeProcThreadAttributeList && myUpdateProcThreadAttribute  && myLoadBitmapA && myDeleteObject && myWaitForMultipleObjects && myRegEnumValueA && myRegQueryInfoKeyA && myRegEnumKeyExA && myCreateEventA && myRegNotifyChangeKeyValue && myCloseHandle && myConvertSidToStringSidA   && myCreatePopupMenu && myCreateProcessA && myCreateThread && myCreateToolhelp32Snapshot && myCreateWindowExA  && myDefWindowProcA && myDeleteCriticalSection  && myDialogBoxParamA && myDispatchMessageA && myEndDialog && myEnterCriticalSection && myFindResourceA && myGetComputerNameA && myGetCursorPos  && myGetDlgItem   && myGetMessageA && myGetModuleHandleA && myGetProcessHeap  && myGetTokenInformation && myHeapAlloc && myHeapFree && myInsertMenuA && myLeaveCriticalSection  && myLoadCursorA && myLoadIconA && myLoadResource && myLocalFree && myLockResource && myLookupAccountSidA && myMessageBoxIndirectA && myOpenProcess && myOpenProcessToken && myProcess32First && myProcess32Next   && myRegCloseKey && myRegOpenKeyExA && myRegQueryValueExA && myRegisterClassExA && myRegisterWindowMessageA && mySendMessageA  && mySetForegroundWindow  && mySetThreadPriority && mySetWindowPos && myShowWindow && myShowWindowAsync && mySizeofResource && mySleep  && myTrackPopupMenu && myTranslateMessage && myUpdateWindow  && myWSACleanup && myWSAStartup && myWaitForSingleObject && myconnect && mygethostbyname && myhtons && mysocket   && ptrShell_NotifyIconA )  )
+	if(!  (myIsImmersiveProcess&&myDestroyWindow&&myExitThread&&myTerminateProcess&&myPostQuitMessage&&myResetEvent&&mySetEvent&&myRegSetValueExA&&myQueueUserAPC2&&myThread32First&&myThread32Next&&myExitProcess&&myEvtClose&&myEvtSubscribe&&myEvtRender&&myGetFileSizeEx&&myGetUserNameExA&&myGetUserNameA&&myWideCharToMultiByte&&ptrSHGetKnownFolderPath&&ptrCoTaskMemFree&&myCreatePipe&&myGetExitCodeProcess&&mySetHandleInformation&&myGetStdHandle&&myOpenThread&&myResumeThread&&myRegisterWaitForSingleObject&&myUnregisterWait&&myQueryDosDeviceA&&myGetProcessImageFileNameA&&myChangeWindowMessageFilterEx&&myclosesocket && myVirtualFreeEx && myCryptUnprotectMemory&&myGetModuleInformation&&myGetExitCodeThread&&myCreateRemoteThread&&myWriteProcessMemory && myVirtualAllocEx&&myEnumProcessModulesEx&& myGetModuleFileNameExA && myReal_LoadLibraryA && myReadProcessMemory && myIsWow64Process && myCreateFileA && myReadFile && myCryptAcquireContextA && myCryptCreateHash && myCryptDestroyHash && myCryptGetHashParam && myCryptHashData && myCryptReleaseContext && myWTSQueryUserToken && myProcessIdToSessionId && myCreateProcessAsUserA && myGetShellWindow && myGetWindowThreadProcessId && myInitializeProcThreadAttributeList && myUpdateProcThreadAttribute  && myLoadBitmapA && myDeleteObject && myWaitForMultipleObjects && myRegEnumValueA && myRegQueryInfoKeyA && myRegEnumKeyExA && myCreateEventA && myRegNotifyChangeKeyValue && myCloseHandle && myConvertSidToStringSidA   && myCreatePopupMenu && myCreateProcessA && myCreateThread && myCreateToolhelp32Snapshot && myCreateWindowExA  && myDefWindowProcA && myDeleteCriticalSection  && myDialogBoxParamA && myDispatchMessageA && myEndDialog && myEnterCriticalSection && myFindResourceA && myGetComputerNameA && myGetCursorPos  && myGetDlgItem   && myGetMessageA && myGetModuleHandleA && myGetProcessHeap  && myGetTokenInformation && myHeapAlloc && myHeapFree && myInsertMenuA && myLeaveCriticalSection  && myLoadCursorA && myLoadIconA && myLoadResource && myLocalFree && myLockResource && myLookupAccountSidA && myMessageBoxIndirectA && myOpenProcess && myOpenProcessToken && myProcess32First && myProcess32Next   && myRegCloseKey && myRegOpenKeyExA && myRegQueryValueExA && myRegisterClassExA && myRegisterWindowMessageA && mySendMessageA  && mySetForegroundWindow  && mySetThreadPriority && mySetWindowPos && myShowWindow && myShowWindowAsync && mySizeofResource && mySleep  && myTrackPopupMenu && myTranslateMessage && myUpdateWindow  && myWSACleanup && myWSAStartup && myWaitForSingleObject && myconnect && mygethostbyname && myhtons && mysocket   && ptrShell_NotifyIconA )  )
 	{
 
 		//OutputDebugStringA("testfail");
@@ -4687,7 +4691,7 @@ static void SecEngProcEnumerator_All(std::vector<DWORD> &ProcID32,std::vector<DW
 	do
 	{
 
-		//std::string pexe = ProcStruct.szExeFile;
+		std::string pexe = ProcStruct.szExeFile;
 
 		//if (         (comparei("consoleapp1.exe", pexe) == true)                    )
 		if(1)
@@ -4705,11 +4709,16 @@ static void SecEngProcEnumerator_All(std::vector<DWORD> &ProcID32,std::vector<DW
 				if(myIsImmersiveProcess(h)!=0)
 				{
 
+					if  (comparei(EXPLORER, pexe) == true)
+					{
+						goto AllowExplorer;
+					}
 					myCloseHandle(h);
 					//OutputDebugStringA("this exe:");
-					//OutputDebugStringA(pexe.c_str()   );
+					
 					continue; //don't inject modern UI apps
 				}
+				AllowExplorer:
 
 				//OutputDebugStringA("^queried process" );
 				BOOL BitCheck=FALSE;
@@ -5399,11 +5408,25 @@ static DWORD __stdcall InjectProcessThread(LPVOID lp)
 
 				if(myIsImmersiveProcess(h) !=0)
 				{
+						std::string name;
+						CHAR Buffer[MAX_PATH]{};
+					    if (myGetModuleFileNameExA(h, 0, Buffer, MAX_PATH))
+						{
+					      	name = Buffer;
+							if (  (ci_endswith(name, "\\explorer.exe")==true) )
+							{
+								//OutputDebugStringA(std::to_string(pParms->Pid).c_str() );
+								//OutputDebugStringA(name.c_str() );
+								goto skipexpl;
+							}
+					    }
+
 						delete pParms;
 						myCloseHandle(h);
 						myLeaveCriticalSection(&InjectCritical);
 						return 0; //skip inject modern UI apps
 				}
+				skipexpl:
 
 				BOOL BitCheck=FALSE;
 				BOOL ret= myIsWow64Process(h,&BitCheck);
@@ -6179,4 +6202,5 @@ static DWORD __stdcall ThreadCrypto(LPVOID l)
 	return 0;
 
 }
+
 

@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "ArcticMyst Security"
-#define MyAppVersion "20221218e"
+#define MyAppVersion "20221218f"
 #define MyAppPublisher "DeepTide, LLC"
 #define MyAppURL "https://deeptide.com"
 
