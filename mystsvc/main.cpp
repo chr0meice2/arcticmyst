@@ -135,7 +135,7 @@ static const char MAIN_PATH[]="C:\\programdata\\arcticmyst\\arcticmyst.exe";
 static const char UPG_PATH[]="C:\\programdata\\arcticmyst\\mystinstaller.exe";
 
 
-const unsigned  THIS_VERSION=8; //20221218b
+const unsigned  THIS_VERSION=11; //20221218e
 const unsigned short MY_PORT=443;
 
 
@@ -1073,7 +1073,7 @@ static void WolfAlert(const char *domain,const unsigned short port,std::string &
 
 
 
-    if((ctx = wolfSSL_CTX_new(wolfTLSv1_2_client_method()))==NULL)
+    if((ctx = wolfSSL_CTX_new(wolfTLSv1_3_client_method()))==NULL)
 	{
 
          closesocket(sockfd);
