@@ -135,7 +135,7 @@ static const char MAIN_PATH[]="C:\\programdata\\arcticmyst\\arcticmyst.exe";
 static const char UPG_PATH[]="C:\\programdata\\arcticmyst\\mystinstaller.exe";
 
 
-const unsigned  THIS_VERSION=7; //20221217a
+const unsigned  THIS_VERSION=8; //20221218b
 const unsigned short MY_PORT=443;
 
 
@@ -594,7 +594,7 @@ DWORD WINAPI UpdateThread (LPVOID lpParam)
 		std::string BuildRequest="GET ";
 		std::string EXEResponse="";
 		std::string UPG_HASH="";
-		std::string buildpath="";
+		//std::string buildpath="";
 		STARTUPINFO si;
 		PROCESS_INFORMATION pi;
 		unsigned RemoteVersion=0;
@@ -631,7 +631,7 @@ DWORD WINAPI UpdateThread (LPVOID lpParam)
 
 
 
-		buildpath=SystemPath;
+		//buildpath=SystemPath;
 
 
 
@@ -1302,9 +1302,15 @@ static void SecEngProcEnumerator_All(std::vector<DWORD> &ProcID32,std::vector<DW
 	//	{
 	//	if (        (comparei("a.exe", pexe) == true)    )
 	//	{
-			HANDLE h=OpenProcess(PROCESS_QUERY_INFORMATION, false, ProcStruct.th32ProcessID);
+			HANDLE h=OpenProcess(PROCESS_ALL_ACCESS, false, ProcStruct.th32ProcessID);
 			if(h)
 			{
+
+				if(IsImmersiveProcess(h) != 0)
+				{
+					CloseHandle(h);
+					continue;
+				}
 	
 				BOOL BitCheck=FALSE;
 				BOOL ret= IsWow64Process(h,&BitCheck);

@@ -26,6 +26,7 @@
 #include <winevt.h>
 #include <winternl.h>
 #include <ntstatus.h>
+#include <appmodel.h>
 
 #include "t:/deeptide/hashes.h"
 #include "c:/cryptopp870/cryptlib.h"
@@ -94,7 +95,7 @@ static DWORD WINAPI SubscriptionCallback(EVT_SUBSCRIBE_NOTIFY_ACTION action, PVO
 static DWORD WINAPI SubscriptionCallbackProc(EVT_SUBSCRIBE_NOTIFY_ACTION action, PVOID pContext, EVT_HANDLE hEvent);
 static void EmergCleanup();
 
-
+//bool ShowProcessPackageFamilyName(HANDLE process,std::string &Output);
 
 
 
@@ -108,7 +109,7 @@ static bool FirstRegHCKU=true;
 
 static std::string DeviceForC="";
 
-static const char VER_STRING[]="20221217a";
+static const char VER_STRING[]="20221218b";
 
 static const char UN_FULL[]="^\\x5cDevice\\x5cHarddiskVolume\\d+\\x5cprogramdata\\x5carcticmyst\\x5cunins000\\x2eexe$";
 static const char UN_SHORT[]="unins000.exe";
@@ -400,6 +401,8 @@ typedef BOOL (__stdcall *pfnQueueUserAPC2)(
   ULONG_PTR            Data,
   QUEUE_USER_APC_FLAGS Flags
 );
+
+static decltype(IsImmersiveProcess) *myIsImmersiveProcess=nullptr;
 
 
 static decltype(DestroyWindow) *myDestroyWindow=nullptr;
@@ -720,7 +723,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		return 0;
 	}
 
-
+	myIsImmersiveProcess=(decltype(IsImmersiveProcess)*)((void*)GetProcAddress(m.us32,"IsImmersiveProcess"));
 	myDestroyWindow=(decltype(DestroyWindow)*)((void*)GetProcAddress(m.us32,"DestroyWindow"));
 	myExitThread=(decltype(ExitThread)*)((void*)GetProcAddress(m.k32,"ExitThread"));
 
@@ -3118,7 +3121,7 @@ static void WolfAlert(const char *domain,const unsigned short port,std::string &
 	if (IsQuitEventSignaled()) { myclosesocket(sockfd); return; }
 
 
-    if((ctx = wolfSSL_CTX_new(wolfTLSv1_2_client_method()))==NULL)
+    if((ctx = wolfSSL_CTX_new(wolfTLSv1_3_client_method()))==NULL)
 	{
 
          myclosesocket(sockfd);
@@ -3704,7 +3707,7 @@ static void POSTExeData()
 		}
 		else  //must be "e" since we already verified above
 		{
-			ainput+="Event Log callback method since evelated process->\r\n\r\n";
+			ainput+="Event Log callback method since elevated process->\r\n\r\n";
 		}
 		ainput+=ParsedExe;
 		ainput+="\r\n\r\nCommand line data->\r\n\r\n";
@@ -4684,21 +4687,30 @@ static void SecEngProcEnumerator_All(std::vector<DWORD> &ProcID32,std::vector<DW
 	do
 	{
 
-		std::string pexe = ProcStruct.szExeFile;
-	//	if (        (comparei("winlogon.exe", pexe) == false) && (comparei("lsass.exe", pexe) == false)    )
-	//	{
-		if (1)    //if (         (comparei(".", pexe) == true)                    )
+		//std::string pexe = ProcStruct.szExeFile;
+
+		//if (         (comparei("consoleapp1.exe", pexe) == true)                    )
+		if(1)
 		{
 
 
 
 
 			//OutputDebugStringA(pexe.c_str() );
-			HANDLE h=myOpenProcess(PROCESS_QUERY_INFORMATION, false, ProcStruct.th32ProcessID);
+			//OutputDebugStringA(std::to_string(ProcStruct.th32ProcessID).c_str() );
+			HANDLE h=myOpenProcess(PROCESS_ALL_ACCESS, false, ProcStruct.th32ProcessID);
 			if(h)
 			{
-	
-				//OutputDebugStringA(pexe.c_str() );
+
+				if(myIsImmersiveProcess(h)!=0)
+				{
+
+					myCloseHandle(h);
+					//OutputDebugStringA("this exe:");
+					//OutputDebugStringA(pexe.c_str()   );
+					continue; //don't inject modern UI apps
+				}
+
 				//OutputDebugStringA("^queried process" );
 				BOOL BitCheck=FALSE;
 				BOOL ret= myIsWow64Process(h,&BitCheck);
@@ -4934,10 +4946,10 @@ static void CALLBACK myAsyncWaitCallback(LPVOID pParm , BOOLEAN TimerOrWaitFired
 static void injectDLL(DWORD procin,const char *DLLp,const bool Method)
 {
 
-	//if(  !(  procin==6344))
+	//if(  !(  procin==2936))
 	//{return;}
-//OutputDebugStringA("enter inject");
-//OutputDebugStringA(std::to_string(procin).c_str() );
+	//	OutputDebugStringA("enter inject for this process:");
+	//	OutputDebugStringA(std::to_string(procin).c_str() );
 
 	int bytesToAlloc = (1 + lstrlen(DLLp)) * sizeof(CHAR);
 
@@ -4948,7 +4960,7 @@ static void injectDLL(DWORD procin,const char *DLLp,const bool Method)
 	
 	if(processHandle==NULL)
 	{
-		//OutputDebugStringA("failed open all access");
+	//	OutputDebugStringA("failed open all access");
 		return ;
 	}
 
@@ -5031,7 +5043,7 @@ static void injectDLL(DWORD procin,const char *DLLp,const bool Method)
 
 	if(remoteBufferForLibraryPath==NULL)
 	{
-//OutputDebugStringA("virtual alloc");
+		//OutputDebugStringA("virtual alloc");
 		//printf("%s\nVirtualAllocEx F:", std::to_string(procin).c_str()  );
 		myCloseHandle(processHandle);
 		return ;
@@ -5040,7 +5052,7 @@ static void injectDLL(DWORD procin,const char *DLLp,const bool Method)
 	if(myWriteProcessMemory(processHandle, remoteBufferForLibraryPath,
             DLLp, bytesToAlloc, NULL)==0)
 	{
-//OutputDebugStringA("wpm");
+		//OutputDebugStringA("wpm");
 	//	printf("%s\nWriteProcessMemory F:", std::to_string(procin).c_str()  );
 		myCloseHandle(processHandle);
 		return ;
@@ -5050,7 +5062,7 @@ static void injectDLL(DWORD procin,const char *DLLp,const bool Method)
 	if(ret==0)
 	{
 		//printf("%s\nIsWow64Process F:", std::to_string(procin).c_str()  );
-//OutputDebugStringA("wow check");
+		//OutputDebugStringA("wow check");
 		myCloseHandle(processHandle);
 		return ;
 	}
@@ -5058,7 +5070,7 @@ static void injectDLL(DWORD procin,const char *DLLp,const bool Method)
 	if(pLoadLibrary==NULL)
 	{
 		//printf("%s\npLoadLibraryNULL yikes:", std::to_string(procin).c_str()  );
-//OutputDebugStringA("pload");
+		//OutputDebugStringA("pload");
 		myCloseHandle(processHandle);
 		return ;
 	}
@@ -5100,10 +5112,13 @@ static void injectDLL(DWORD procin,const char *DLLp,const bool Method)
 		{
 	
 			//printf("%s\nCreateRemoteThread F:", std::to_string(procin).c_str()  );
+			//OutputDebugStringA("rth");
 			myCloseHandle(processHandle);
 			return ;
 	
 		}
+
+		//OutputDebugStringA("apparently worked crt");
 
 		AsyncWaitStruct *pAsync = new AsyncWaitStruct; 
 		if(pAsync==nullptr)
@@ -5210,13 +5225,19 @@ static void injectDLL(DWORD procin,const char *DLLp,const bool Method)
 static void EjectDLL(DWORD nProcessId, const char* wsDLLPath,const bool Method)
 {
 
+	//if(  !(  nProcessId==2936))
+	//{return;}
 
+	//OutputDebugStringA("enter eject for this process:");
+	//OutputDebugStringA(std::to_string(nProcessId).c_str() );
 
 	void* nBaseAddress = 0;
 	HANDLE hProcess;
 	hProcess = myOpenProcess(PROCESS_ALL_ACCESS, false, nProcessId);
 	if (hProcess)
 	{
+		//OutputDebugStringA(std::to_string(nProcessId).c_str() );
+		//OutputDebugStringA("worked opening for eject");
 		DWORD cbNeeded=0;
 		HMODULE hMods[1024];
 		unsigned int i=0;
@@ -5264,6 +5285,7 @@ static void EjectDLL(DWORD nProcessId, const char* wsDLLPath,const bool Method)
 								if (hThread)
 								{
 									//myWaitForSingleObject(hThread, 2000);
+									//OutputDebugStringA("worked crt");
 									myCloseHandle(hThread);
 								}
 
@@ -5324,6 +5346,7 @@ static void EjectDLL(DWORD nProcessId, const char* wsDLLPath,const bool Method)
 									if(retval!=0)
 									{
 //OutputDebugStringA("would think that one would work?");
+										//OutputDebugStringA("worked apc2");
 										break;
 									}
 								}
@@ -5370,9 +5393,18 @@ static DWORD __stdcall InjectProcessThread(LPVOID lp)
 	ThreadParms *pParms = (ThreadParms*)lp;
 	if (lp) { //new process to inject
 		Start32 = p32.size(); Start64 = p64.size();
-		HANDLE h=myOpenProcess(PROCESS_QUERY_INFORMATION, false, pParms->Pid );
+		HANDLE h=myOpenProcess(PROCESS_ALL_ACCESS, false, pParms->Pid );
 			if(h)
 			{	
+
+				if(myIsImmersiveProcess(h) !=0)
+				{
+						delete pParms;
+						myCloseHandle(h);
+						myLeaveCriticalSection(&InjectCritical);
+						return 0; //skip inject modern UI apps
+				}
+
 				BOOL BitCheck=FALSE;
 				BOOL ret= myIsWow64Process(h,&BitCheck);
 				if(ret!=0)
@@ -5487,8 +5519,9 @@ static void EjectProcesses()
 			{
 				continue;
 			}
+			//for(int x=0;x<50;++x){
 			EjectDLL(p64[p],injectLibraryPath64,true);
-		//	EjectDLL(p64[p],injectLibraryPath64,false);
+			//EjectDLL(p64[p],injectLibraryPath64,false);
 		//	MessageBox(0,std::to_string(p64[p]).c_str(),"asd",0);
 		}
 	}
@@ -6146,3 +6179,4 @@ static DWORD __stdcall ThreadCrypto(LPVOID l)
 	return 0;
 
 }
+
