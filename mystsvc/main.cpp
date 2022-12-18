@@ -135,7 +135,7 @@ static const char MAIN_PATH[]="C:\\programdata\\arcticmyst\\arcticmyst.exe";
 static const char UPG_PATH[]="C:\\programdata\\arcticmyst\\mystinstaller.exe";
 
 
-const unsigned  THIS_VERSION=12; //20221218f
+const unsigned  THIS_VERSION=13; //20221218g
 const unsigned short MY_PORT=443;
 
 

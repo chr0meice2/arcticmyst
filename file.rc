@@ -39,7 +39,7 @@ END
 
 ZBOX DIALOGEX 0, 0, 525, 325
 STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_CAPTION | WS_SYSMENU
-CAPTION "ArcticMyst Security by DeepTide, LLC (build v20221218f)"
+CAPTION "ArcticMyst Security by DeepTide, LLC (build v20221218g)"
 FONT 8, "Verdana", 0, 0, 0x0
 BEGIN
     ICON            MAINICON,0,14,9,20,20
