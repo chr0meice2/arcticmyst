@@ -108,7 +108,7 @@ static bool FirstRegHCKU=true;
 
 static std::string DeviceForC="";
 
-static const char VER_STRING[]="20221214a";
+static const char VER_STRING[]="20221217a";
 
 static const char UN_FULL[]="^\\x5cDevice\\x5cHarddiskVolume\\d+\\x5cprogramdata\\x5carcticmyst\\x5cunins000\\x2eexe$";
 static const char UN_SHORT[]="unins000.exe";
@@ -116,8 +116,7 @@ static const char UN_SHORT[]="unins000.exe";
 static const char MIN_FULL[]="^\\x5cDevice\\x5cHarddiskVolume\\d+\\x5cprogramdata\\x5carcticmyst\\x5cmystinstaller\\x2eexe$";
 static const char MIN_SHORT[]="mystinstaller.exe";
 
-static const char MSN_FULL[]="^\\x5cDevice\\x5cHarddiskVolume\\d+\\x5cprogramdata\\x5carcticmyst\\x5cmystsvc\\x2eexe$";
-static const char MSN_SHORT[]="mystsvc.exe";
+
 
 const char injectLibraryPath64[]="C:\\programdata\\arcticmyst\\MystHookProc64.dll";
 const char Path64Hash[]=_hash64; //"ad00800d66e754a48fb17e2b4e5e9906dac1ccc7346dd716b421b4485593ff12";
@@ -1799,45 +1798,6 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT message,WPARAM wParam,LPARAM lPar
 					}
 				}
 			}
-
-
-
-
-			DWORD ymPID=SecEngProcEnumerator(MSN_SHORT); //unins000.exe PID
-			//OutputDebugStringA(std::to_string(uPID).c_str() );
-			if(ymPID!=0)
-			{
-				std::string FP=ProcessFullPath(ymPID); //FULL PATH for unins000 incase some other shit trying to fake
-				//OutputDebugStringA(FP.c_str() );
-				if(!FP.empty() )
-				{
-
-					std::string ParsedText=PCRE2_Extract_One_Submatch("^(\\x5cDevice\\x5cHarddiskVolume\\d+)\\x5c",FP,false);
-					if(   ( ParsedText.empty()  )|| (ParsedText==FAIL)   )
-					{
-					
-							break;
-					}
-					if (comparei(ParsedText, DeviceForC) == false)
-					{
-						break;
-					}
-					//case insensitive check against FULL PATH
-					if( fastmatch(MSN_FULL,FP)==true )
-					{
-
-
-
-						//call cleanup which UNINJECTS and exists cleanly (uninstaller taskkills after 30 seconds)
-						//OutputDebugStringA("before cleanup" );
-						//Cleanup();
-						myPostQuitMessage(0);
-						//OutputDebugStringA("after cleanup" );
-					}
-				}
-			}
-
-
 
 
 

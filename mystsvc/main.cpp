@@ -55,7 +55,7 @@ static decltype( SafeUnhookParams) *myReal_SafeUnhook=nullptr;
 template <size_t charCount>
 void strcpy_safe(char (&output)[charCount], const char* pSrc)
 {
-	strncpy(output, pSrc, charCount);
+	strncpy(output, pSrc, charCount-1);
 	output[charCount-1] = 0;
 }
 
@@ -135,7 +135,7 @@ static const char MAIN_PATH[]="C:\\programdata\\arcticmyst\\arcticmyst.exe";
 static const char UPG_PATH[]="C:\\programdata\\arcticmyst\\mystinstaller.exe";
 
 
-const unsigned  THIS_VERSION=5; //20221214a
+const unsigned  THIS_VERSION=7; //20221217a
 const unsigned short MY_PORT=443;
 
 
@@ -665,7 +665,10 @@ DWORD WINAPI UpdateThread (LPVOID lpParam)
 		RemoteVersion=atoi(ExtractionVersion.c_str());
 		if(RemoteVersion>THIS_VERSION)
 		{
-
+			//OutputDebugStringA("Remote version");
+			//OutputDebugStringA(std::to_string(RemoteVersion).c_str() );
+			//OutputDebugStringA("This version");
+			//OutputDebugStringA(std::to_string(THIS_VERSION).c_str() );
 			BuildRequest+=ExtractURL;
 			BuildRequest+=" HTTP/1.1\r\nHost: deeptide.com\r\nUser-Agent: ";
 			BuildRequest+=buildUserAgent;
@@ -708,58 +711,27 @@ DWORD WINAPI UpdateThread (LPVOID lpParam)
 			}
 		
 
+			//OutputDebugStringA("enter upgrade");
 
 	
 			EnterCriticalSection(&UpgradeCritical);
 		//	OutputDebugStringA("ejecting from svc");
 
 
-			HWND hwnd=FindWindowA("TideSecOps","TideSecOps");
-			if(hwnd==0)
-			{
-				LeaveCriticalSection(&UpgradeCritical);
-				goto Failed2;
-			}
-			else
-			{
-				SendMessageA(hwnd,1026,0,0);
-			}
-
-			bool success=false;
-
-			for(int x=0;x<=30;++x)
-			{
-				Sleep(1000);
-
-				if(SecEngProcEnumerator(ARCTIC)!=0)
-				{
-						EjectProcesses();
-						continue;
-				}
-				else
-				{
-					success=true;
-					break; //not running
-				}
-
-			}
-
-			//even after 30 attemtps failed
-			if(!success)
-			{
-				LeaveCriticalSection(&UpgradeCritical);
-				goto Failed2;
-			}
+			//OutputDebugStringA("before manual eject");
+			EjectProcesses();
+			//OutputDebugStringA("after manual eject");
 
 			//only upgrade if explorer is running
 			if(SecEngProcEnumerator(EXPLORER)==0)
 			{
+				//	OutputDebugStringA("leaving bc no explorer");
 					LeaveCriticalSection(&UpgradeCritical);
 					goto Failed2;
 			}
 
 
-		//	OutputDebugStringA("ejecting in svc done");
+			//OutputDebugStringA("creating process"); // the upgrade will trigger an EJECT
 			if( !CreateProcessA(NULL,TUPG_PATH,NULL,NULL,FALSE,0,0,NULL,&si,&pi))
 			{
 					LeaveCriticalSection(&UpgradeCritical);
@@ -775,7 +747,7 @@ DWORD WINAPI UpdateThread (LPVOID lpParam)
 			{
 				CloseHandle( pi.hThread );
 			}
-		//	OutputDebugStringA("done launching upg");
+			//OutputDebugStringA("done launching upg");
 			LeaveCriticalSection(&UpgradeCritical);
 
 		}
