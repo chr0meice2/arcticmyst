@@ -51,68 +51,17 @@ static void launch_and_get_output2(char * cmdline_in,std::string &outbuf);
 void WINAPI SafeUnhookParams(void *dummy);
 
 static decltype( SafeUnhookParams) *myReal_SafeUnhook=nullptr;
-
 template <size_t charCount>
-void strcpy_safe(char (&output)[charCount], const char* pSrc)
-{
-	strncpy(output, pSrc, charCount-1);
+__declspec(noinline)
+static void strcpy_safe(char (&output)[charCount], const char* pSrc)
+{	
+	strncpy(output, pSrc, charCount);
 	output[charCount-1] = 0;
 }
 
 
-typedef enum _QUEUE_USER_APC_FLAGS {
-  QUEUE_USER_APC_FLAGS_NONE,
-  QUEUE_USER_APC_FLAGS_SPECIAL_USER_APC,
-  QUEUE_USER_APC_CALLBACK_DATA_CONTEXT
-} QUEUE_USER_APC_FLAGS;
-
-typedef BOOL (__stdcall *pfnQueueUserAPC2)(
-  PAPCFUNC             ApcRoutine,
-  HANDLE               Thread,
-  ULONG_PTR            Data,
-  QUEUE_USER_APC_FLAGS Flags
-);
 
 
-
-struct DLLPool
-{
-    public:
-	DLLPool(const DLLPool &);
-	DLLPool &operator=(const DLLPool &);
-    struct DLL 
-	{
-        HINSTANCE handle;
-       
-        DLL(const char *libname):handle(LoadLibrary(libname)){}
-        operator HINSTANCE()const{ return handle;}
-        DLL(const DLL &) = delete;
-        DLL(DLL &&) = delete;
-        DLL &operator=(const DLL &) = delete;
-        DLL &operator=(DLL &&) = delete;
-        ~DLL()
-		{
-			if(handle != NULL)
-			{
-        		FreeLibrary(handle);
-        	}
-		}
-    };
-
-	DLL k32="kernel32";
-
-
-    bool success;
-    DLLPool() { success =   k32    ; }
-};
-
-
-static DLLPool m;
-
-
-
-
-pfnQueueUserAPC2 myQueueUserAPC2=nullptr;
 
 static bool	WFClean=false;
 static bool	WSClean=false;
@@ -135,7 +84,7 @@ static const char MAIN_PATH[]="C:\\programdata\\arcticmyst\\arcticmyst.exe";
 static const char UPG_PATH[]="C:\\programdata\\arcticmyst\\mystinstaller.exe";
 
 
-const unsigned  THIS_VERSION=13; //20221218g
+const unsigned  THIS_VERSION=14; //20221219a
 const unsigned short MY_PORT=443;
 
 
@@ -145,7 +94,6 @@ static SERVICE_STATUS          gSvcStatus;
 static SERVICE_STATUS_HANDLE   gSvcStatusHandle; 
 static HANDLE                  ghSvcStopEvent = NULL;
 
-static BOOL GetThreadIdByProcessId(UINT32 ProcessId,std::vector<UINT32>  & ThreadIdVector);
 
 
 static std::string SystemPath="";
@@ -454,18 +402,8 @@ int __cdecl main(int argc, CHAR *argv[])
 
 	}
 
-	if(m.success==false)
-	{
 
-		return 0;
-	}
 
-	 myQueueUserAPC2 =(pfnQueueUserAPC2)((void*)GetProcAddress(m.k32, "QueueUserAPC2"));
-
-	if(!myQueueUserAPC2)
-	{
-		return 0;
-	}
 
     SERVICE_TABLE_ENTRY DispatchTable[] = 
     { 
@@ -1555,63 +1493,6 @@ static void EjectDLL(DWORD nProcessId, const char* wsDLLPath,const bool Method)
 
 
 
-							std::vector<UINT32> myThreadVec;
-							BOOL checkt=GetThreadIdByProcessId(nProcessId, myThreadVec);
-							if(checkt==FALSE)
-							{
-								CloseHandle(hProcess);
-								return ;
-							}
-						
-							if(myThreadVec.empty() )
-							{
-								CloseHandle(hProcess);
-								return ;
-							}
-						
-							int ThreadCount = myThreadVec.size();
-							for (int tc=0;tc<ThreadCount;++tc)
-							{
-								UINT32 ThreadId = myThreadVec[tc];
-								HANDLE		ThreadHandle = OpenThread(THREAD_ALL_ACCESS, FALSE, ThreadId);
-								if(ThreadHandle==NULL)
-								{
-									continue;
-								}
-//OutputDebugStringA(std::to_string(ThreadId).c_str());
-								myReal_SafeUnhook=(decltype(SafeUnhookParams)*)((void*)GetProcAddressEx(hProcess,hMods[i],"SafeUnhookAPC2"));
-								if(myReal_SafeUnhook!=nullptr)
-								{
-									auto retval=myQueueUserAPC2((PAPCFUNC)(INT_PTR)myReal_SafeUnhook, ThreadHandle, (ULONG_PTR)nBaseAddress, QUEUE_USER_APC_FLAGS_SPECIAL_USER_APC);
-									if(retval==0)
-									{
-//OutputDebugStringA("failed uninject qapc b/c of this...");
-//OutputDebugStringA(std::to_string(myGetLastError()).c_str() );
-										CloseHandle(ThreadHandle);
-										continue;
-									}
-//OutputDebugStringA("b1");
-
-									//myWaitForSingleObject(ThreadHandle, 2000);
-
-									//OutputDebugStringA("b2");
-
-									CloseHandle(ThreadHandle);
-//OutputDebugStringA("b3");
-									if(retval!=0)
-									{
-//OutputDebugStringA("would think that one would work?");
-										break;
-									}
-								}
-								else
-								{
-//OutputDebugStringA("nullptr on Unhook");
-									CloseHandle(ThreadHandle);
-								}
-	
-							}
-
 
 							break;
 						
@@ -2054,39 +1935,6 @@ static BOOL GetLogonFromToken (HANDLE hToken, std::string & strUser, std::string
 
 
 
-static BOOL GetThreadIdByProcessId(UINT32 ProcessId,std::vector<UINT32>  & ThreadIdVector)
-{
-
-	HANDLE			ThreadSnapshotHandle = NULL;
-	THREADENTRY32	ThreadEntry32 ;
-
-	memset(&ThreadEntry32, 0, sizeof(ThreadEntry32));
-
-	ThreadEntry32.dwSize = sizeof(THREADENTRY32);
-
-	ThreadSnapshotHandle = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);	
-	if (ThreadSnapshotHandle == INVALID_HANDLE_VALUE)
-	{
-		return FALSE;
-	}
-
-	if (Thread32First(ThreadSnapshotHandle, &ThreadEntry32))
-	{
-		do
-		{
-			if (ThreadEntry32.th32OwnerProcessID == ProcessId)
-			{
-				ThreadIdVector.push_back(ThreadEntry32.th32ThreadID);	
-			}
-		} while (Thread32Next(ThreadSnapshotHandle, &ThreadEntry32));
-	}
-	
-	CloseHandle(ThreadSnapshotHandle);
-	ThreadSnapshotHandle = NULL;
-	return TRUE;
-
-
-}
 
 
 static bool fastmatch(const std::string pattern, const std::string &subject)

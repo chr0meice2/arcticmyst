@@ -303,21 +303,7 @@ extern "C" __declspec(dllexport) WINAPI void SafeUnhookCRT(void *Dummylol)
 }
 
 
-extern "C" __declspec(dllexport) WINAPI void SafeUnhookAPC2(void *Dummylol)
-{
-	//OutputDebugStringA("unhook 1 apc2");
-	if(Free_Real_NtCreateUserProcess)
-	{
-		//OutputDebugStringA("unhook 2 apc2");
-		Mhook_Unhook((PVOID*)&myReal_NtCreateUserProcess);
-	}
 
-	//OutputDebugStringA("unhook 3 apc2");
-
-	DWORD dwTID;
-	CreateThread( NULL , 0 , GetProcAddress(GetModuleHandle("kernel32.dll"),"FreeLibrary") , Dummylol , 0 , &dwTID);
-	
-}
 
 DWORD __stdcall ProcAttachThread(LPVOID l)
 {
