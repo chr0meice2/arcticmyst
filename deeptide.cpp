@@ -28,7 +28,7 @@
 #include <ntstatus.h>
 #include <appmodel.h>
 
-#include "t:/deeptide/hashes.h"
+//#include "t:/deeptide/hashes.h"
 #include "c:/cryptopp870/cryptlib.h"
 #include "c:/cryptopp870/filters.h"
 #include "c:/cryptopp870/base64.h"
@@ -39,13 +39,15 @@
 #include "c:/cryptopp870/serpent.h"
 #include "c:/cryptopp870/secblock.h"
 #include "c:/cryptopp870/whrlpool.h"
+#undef W64LIT
+
 #include <wolfssl/options.h>
 #include <wolfssl/ssl.h>
 #include "resource.h"
 #define PCRE2_STATIC
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include "C:/pcre2-10.42/src/pcre2.h"
-#include "C:/curl-7.86.0/include/curl/curl.h"
+#include "C:/curl-7.87.0/include/curl/curl.h"
 
 #define MAX_KEY_LENGTH 255
 #define MAX_VALUE_NAME 16383
@@ -109,7 +111,7 @@ static bool FirstRegHCKU=true;
 
 static std::string DeviceForC="";
 
-static const char VER_STRING[]="20221220a";
+static const char VER_STRING[]="20221221a";
 
 static const char UN_FULL[]="^\\x5cDevice\\x5cHarddiskVolume\\d+\\x5cprogramdata\\x5carcticmyst\\x5cunins000\\x2eexe$";
 static const char UN_SHORT[]="unins000.exe";
@@ -120,9 +122,9 @@ static const char MIN_SHORT[]="mystinstaller.exe";
 
 
 const char injectLibraryPath64[]="C:\\programdata\\arcticmyst\\MystHookProc64.dll";
-const char Path64Hash[]=_hash64; //"ad00800d66e754a48fb17e2b4e5e9906dac1ccc7346dd716b421b4485593ff12";
+//const char Path64Hash[]=_hash64; 
 const char injectLibraryPath32[]="C:\\programdata\\arcticmyst\\MystHookProc32.dll";	
-const char Path32Hash[]=_hash32; //"7b418a575f6659a9e4caf009eb6af34a841eefd3d7a9bc757c7f812d49ba65df";
+//const char Path32Hash[]=_hash32; 
 
 static void EjectProcesses();
 static DWORD __stdcall InjectProcessThread(LPVOID lp);
@@ -664,6 +666,7 @@ struct DLLPool
         DLL &operator=(DLL &&) = delete;
         ~DLL()
 		{
+		
 			if(handle != NULL)
 			{
         		FreeLibrary(handle);
@@ -2291,13 +2294,19 @@ static const std::string logTSEntry()
 static void Cleanup()
 {
 
-//	OutputDebugStringA("Time to quit!");
+
+
 	mySetEvent( hQuitEvent ); //tell  everyone that is time to quit!
+
 	EjectProcesses();
+
+
 
 	if (hwndAlertLogBox) { myDestroyWindow(hwndAlertLogBox);  }
 	if (GlobalAboutWindow) {  mySendMessageA(GlobalAboutWindow,WM_CLOSE,0,0)   ;    }
 	if (GlobalCryptoWindow) { mySendMessageA(GlobalCryptoWindow,WM_CLOSE,0,0)   ; }
+
+
 
 	//OutputDebugStringA("Waiting for threads to finish");
 	if ((myWaitForSingleObject( hEventThread , 30000 ) != WAIT_OBJECT_0)) {
@@ -2312,7 +2321,7 @@ static void Cleanup()
 	}
 //	OutputDebugStringA("All Threads closed, starting cleanup!");
 
-
+	
 
 	if(hResults)
 	{
@@ -2440,7 +2449,9 @@ static void Cleanup()
 	
 	if(IconCleanupRequired==true)
 	{
+	
 		(*ptrShell_NotifyIconA)(NIM_DELETE, &tnid);	
+	
 	}
 
 
@@ -4944,7 +4955,7 @@ static void CALLBACK myAsyncWaitCallback(LPVOID pParm , BOOLEAN TimerOrWaitFired
 static void injectDLL(DWORD procin,const char *DLLp,const bool Method)
 {
 
-	//if(  !(  procin==2936))
+	//if(  !(  procin==1940))
 	//{return;}
 	//	OutputDebugStringA("enter inject for this process:");
 	//	OutputDebugStringA(std::to_string(procin).c_str() );
@@ -5129,6 +5140,7 @@ static void injectDLL(DWORD procin,const char *DLLp,const bool Method)
 static void EjectDLL(DWORD nProcessId, const char* wsDLLPath,const bool Method)
 {
 
+	//OutputDebugStringA(std::to_string(nProcessId).c_str() );
 	//if(  !(  nProcessId==2936))
 	//{return;}
 
@@ -5137,6 +5149,8 @@ static void EjectDLL(DWORD nProcessId, const char* wsDLLPath,const bool Method)
 
 	void* nBaseAddress = 0;
 	HANDLE hProcess;
+	//OutputDebugStringA("before open");
+
 	hProcess = myOpenProcess(PROCESS_ALL_ACCESS, false, nProcessId);
 	if (hProcess)
 	{
@@ -5147,16 +5161,17 @@ static void EjectDLL(DWORD nProcessId, const char* wsDLLPath,const bool Method)
 		unsigned int i=0;
 		if (myEnumProcessModulesEx(hProcess, hMods, sizeof(hMods), &cbNeeded, LIST_MODULES_ALL))
 		{
+			//OutputDebugStringA("ran enum");
 			for (i = 0; i < (cbNeeded / sizeof(HMODULE)); i++)
 			{
 				CHAR wszModName[MAX_PATH]{};
 				if (myGetModuleFileNameExA(hProcess, hMods[i], wszModName,	sizeof(wszModName) / sizeof(CHAR)))
 				{
-					//MessageBoxA(0,wszModName,"test",0);
+					//OutputDebugStringA(wszModName);
 					if (lstrcmp(wszModName, wsDLLPath) == 0)
 					{
 
-
+						//OutputDebugStringA("matched");
 						MODULEINFO modInfo;
 						memset(&modInfo, 0, sizeof(modInfo));
 						if (myGetModuleInformation(hProcess, hMods[i], &modInfo, sizeof(modInfo)))
@@ -5173,10 +5188,12 @@ static void EjectDLL(DWORD nProcessId, const char* wsDLLPath,const bool Method)
 							// if true it means Eject method is CRT, false means APC2
 							if(Method)
 							{
-
+							//	OutputDebugStringA("gpa ex" );
 								myReal_SafeUnhook=(decltype(SafeUnhookParams)*)((void*)GetProcAddressEx(hProcess,hMods[i],"SafeUnhookCRT"));
 								if(myReal_SafeUnhook==nullptr)
 								{
+
+								//	OutputDebugStringA("null" );
 									myCloseHandle(hProcess);
 	
 									hProcess=INVALID_HANDLE_VALUE;
@@ -5184,14 +5201,15 @@ static void EjectDLL(DWORD nProcessId, const char* wsDLLPath,const bool Method)
 									return;
 
 								}
-
+							//	OutputDebugStringA("before crt" );
 								HANDLE hThread = myCreateRemoteThread(hProcess, NULL, 1024*1024, (LPTHREAD_START_ROUTINE)(INT_PTR)myReal_SafeUnhook, nBaseAddress, 0, NULL);	
 								if (hThread)
 								{
-									//myWaitForSingleObject(hThread, 2000);
-									//OutputDebugStringA("worked crt");
+									myWaitForSingleObject(hThread, 2000);
+								
 									myCloseHandle(hThread);
 								}
+								
 
 								myCloseHandle(hProcess);
 
@@ -5213,9 +5231,9 @@ static void EjectDLL(DWORD nProcessId, const char* wsDLLPath,const bool Method)
 			}
 		}
 
-		//OutputDebugStringA("b4");
+	
 		myCloseHandle(hProcess);
-		//OutputDebugStringA("b5");
+	
 		hProcess=INVALID_HANDLE_VALUE;
 		//MessageBoxA(0,"gothere","shouldwork",0);
 	}
@@ -5290,6 +5308,7 @@ static DWORD __stdcall InjectProcessThread(LPVOID lp)
 
 		for(unsigned p=Start64;p<p64.size();++p)
 		{
+			/*
 			std::string PAHashOut2="";
 			if( ReadAndHash(injectLibraryPath64,PAHashOut2) == false)
 			{
@@ -5301,6 +5320,7 @@ static DWORD __stdcall InjectProcessThread(LPVOID lp)
 
 				continue;
 			}
+			*/
 			injectDLL(p64[p],injectLibraryPath64,true);  
 		//	injectDLL(p64[p],injectLibraryPath64,false);  
 			//MessageBox(0,std::to_string(p64[p]).c_str(),"asdf",0);
@@ -5312,6 +5332,7 @@ static DWORD __stdcall InjectProcessThread(LPVOID lp)
 
 		for(unsigned p=Start32;p<p32.size();++p)
 		{
+			/*
 			std::string PAHashOut2="";
 			if( ReadAndHash(injectLibraryPath32,PAHashOut2) == false)
 			{
@@ -5320,7 +5341,7 @@ static DWORD __stdcall InjectProcessThread(LPVOID lp)
 			if(PAHashOut2!=Path32Hash)
 			{
 				continue;
-			}
+			}*/
 			injectDLL(p32[p],injectLibraryPath32,true);
 		//	injectDLL(p32[p],injectLibraryPath32,false);
 			//MessageBox(0,std::to_string(p32[p]).c_str(),"asdf",0);
@@ -5358,9 +5379,9 @@ static DWORD __stdcall InjectProcessThread(LPVOID lp)
 
 static void EjectProcesses()
 {
-//OutputDebugStringA("Waiting for eject critical section");
+
 	myEnterCriticalSection(&InjectCritical);
-//OutputDebugStringA("Waiting for all pending injections");
+
 	myWaitForSingleObject( hEventCleanup , EjectTimeout );
 
 
@@ -5368,6 +5389,7 @@ static void EjectProcesses()
 	{
 		for(unsigned p=0;p<p64.size();++p)
 		{
+			/*
 			std::string PAHashOut2="";
 			if( ReadAndHash(injectLibraryPath64,PAHashOut2) == false)
 			{
@@ -5377,10 +5399,10 @@ static void EjectProcesses()
 			{
 				continue;
 			}
-			//for(int x=0;x<50;++x){
+			*/
+
 			EjectDLL(p64[p],injectLibraryPath64,true);
-			//EjectDLL(p64[p],injectLibraryPath64,false);
-		//	MessageBox(0,std::to_string(p64[p]).c_str(),"asd",0);
+
 		}
 	}
 
@@ -5388,6 +5410,7 @@ static void EjectProcesses()
 	{
 		for(unsigned p=0;p<p32.size();++p)
 		{
+			/*
 			std::string PAHashOut2="";
 			if( ReadAndHash(injectLibraryPath32,PAHashOut2) == false)
 			{
@@ -5397,6 +5420,8 @@ static void EjectProcesses()
 			{
 				continue;
 			}
+			*/
+
 			EjectDLL(p32[p],injectLibraryPath32,true);
 		//	EjectDLL(p32[p],injectLibraryPath32,false);
 		//	MessageBox(0,std::to_string(p32[p]).c_str(),"asd",0);
@@ -5404,6 +5429,8 @@ static void EjectProcesses()
 	}
 
 	myLeaveCriticalSection(&InjectCritical);
+
+
 
 	//MessageBox(0,"done EjectProcesses()","Done",0);
 

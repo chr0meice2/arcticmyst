@@ -7,9 +7,9 @@ WINDRES  = windres.exe
 RES      = deeptide_private.res
 OBJ      = deeptide.o $(RES)
 LINKOBJ  = deeptide.o $(RES)
-LIBS     = -L"C:/msys64/mingw64/lib" -Wl,-Bstatic,-lwinpthread -Wl,--no-whole-archive,--stack,1048576,--gc-sections -L"C:/wolfssl-5.5.3" -mwindows C:/pcre2-10.42/.libs/libpcre2-8.a C:/msys64/MinGW64/lib/libuuid.a C:/msys64/MinGW64/lib/libws2_32.a C:/wolfssl-5.5.3/src/.libs/libwolfssl.a C:/msys64/MinGW64/lib/libwsock32.a C:/cryptopp870/libcryptopp.a C:/curl-7.86.0/lib/.libs/libcurl.a C:/msys64/MinGW64/lib/libws2_32.a c:/msys64/mingw64/lib/libstdc++.a c:/msys64/mingw64/lib/libpthread.a c:/msys64/mingw64/lib/gcc/x86_64-w64-mingw32/12.2.0/libgcc.a C:/msys64/mingw64/lib/gcc/x86_64-w64-mingw32/12.2.0/libgcc_eh.a C:/msys64/mingw64/lib/libbcrypt.a C:/msys64/mingw64/lib/libcrypt32.a -s
-INCS     = -I"C:/msys64/mingw64/include" -I"C:/wolfssl-5.5.3"
-CXXINCS  = -I"C:/msys64/mingw64/include/c++" -I"C:/wolfssl-5.5.3"
+LIBS     = -L"C:/msys64/mingw64/lib" -Wl,-Bstatic,-lwinpthread -Wl,--no-whole-archive,--stack,1048576,--gc-sections -mwindows C:/pcre2-10.42/.libs/libpcre2-8.a C:/msys64/MinGW64/lib/libuuid.a C:/msys64/MinGW64/lib/libws2_32.a C:/wolfssl-5.5.4/src/.libs/libwolfssl.a C:/msys64/MinGW64/lib/libwsock32.a C:/cryptopp870/libcryptopp.a C:/curl-7.87.0/lib/.libs/libcurl.a C:/msys64/MinGW64/lib/libws2_32.a c:/msys64/mingw64/lib/libstdc++.a c:/msys64/mingw64/lib/libpthread.a c:/msys64/mingw64/lib/gcc/x86_64-w64-mingw32/12.2.0/libgcc.a C:/msys64/mingw64/lib/gcc/x86_64-w64-mingw32/12.2.0/libgcc_eh.a C:/msys64/mingw64/lib/libbcrypt.a C:/msys64/mingw64/lib/libcrypt32.a -s
+INCS     = -I"C:/msys64/mingw64/include" -I"C:/wolfssl-5.5.4"
+CXXINCS  = -I"C:/msys64/mingw64/include/c++" -I"C:/wolfssl-5.5.4"
 BIN      = arcticmyst.exe
 CXXFLAGS = $(CXXINCS) -Ofast -Wall -Wextra -pedantic -static -static-libgcc  -static-libstdc++  -DCURL_STATICLIB -std=c++17
 CFLAGS   = $(INCS) -Ofast -Wall -Wextra -pedantic

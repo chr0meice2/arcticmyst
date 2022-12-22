@@ -71,9 +71,9 @@ static const char SYSTEMSTR[]="SYSTEM";
 static bool ci_endswith(const std::string& value, const std::string& ending);
 
 const char injectLibraryPath64[]="C:\\programdata\\arcticmyst\\MystHookProc64.dll";
-const char Path64Hash[]=_hash64;
+//const char Path64Hash[]=_hash64;
 const char injectLibraryPath32[]="C:\\programdata\\arcticmyst\\MystHookProc32.dll";	
-const char Path32Hash[]=_hash32;
+//const char Path32Hash[]=_hash32;
 
 static const char DOMAIN[]="deeptide.com";
 static const char FAIL[]="[NA]";
@@ -84,7 +84,7 @@ static const char MAIN_PATH[]="C:\\programdata\\arcticmyst\\arcticmyst.exe";
 static const char UPG_PATH[]="C:\\programdata\\arcticmyst\\mystinstaller.exe";
 
 
-const unsigned  THIS_VERSION=15; //20221220a
+const unsigned  THIS_VERSION=16; //ver tbd
 const unsigned short MY_PORT=443;
 
 
@@ -1478,7 +1478,7 @@ static void EjectDLL(DWORD nProcessId, const char* wsDLLPath,const bool Method)
 								HANDLE hThread = CreateRemoteThread(hProcess, NULL, 1024*1024, (LPTHREAD_START_ROUTINE)(INT_PTR)myReal_SafeUnhook, nBaseAddress, 0, NULL);	
 								if (hThread)
 								{
-									//myWaitForSingleObject(hThread, 2000);
+									WaitForSingleObject(hThread, 2000);
 									CloseHandle(hThread);
 								}
 
@@ -1528,7 +1528,7 @@ static void EjectProcesses()
 	if(!p64.empty() )
 	{
 		for(unsigned p=0;p<p64.size();++p)
-		{
+		{	/*
 			std::string PAHashOut2="";
 			if( ReadAndHash(injectLibraryPath64,PAHashOut2) == false)
 			{
@@ -1537,7 +1537,7 @@ static void EjectProcesses()
 			if(PAHashOut2!=Path64Hash)
 			{
 				continue;
-			}
+			}*/
 			EjectDLL(p64[p],injectLibraryPath64,true);
 		}
 	}
@@ -1545,7 +1545,7 @@ static void EjectProcesses()
 	if(! p32.empty() )
 	{
 		for(unsigned p=0;p<p32.size();++p)
-		{
+		{	/*
 			std::string PAHashOut2="";
 			if( ReadAndHash(injectLibraryPath32,PAHashOut2) == false)
 			{
@@ -1554,7 +1554,7 @@ static void EjectProcesses()
 			if(PAHashOut2!=Path32Hash)
 			{
 				continue;
-			}
+			}*/
 			EjectDLL(p32[p],injectLibraryPath32,true);
 		}
 	}

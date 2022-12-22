@@ -39,7 +39,7 @@ END
 
 ZBOX DIALOGEX 0, 0, 525, 325
 STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_CAPTION | WS_SYSMENU
-CAPTION "ArcticMyst Security by DeepTide, LLC (build v20221220a)"
+CAPTION "ArcticMyst Security by DeepTide, LLC (build v20221221a)"
 FONT 8, "Verdana", 0, 0, 0x0
 BEGIN
     ICON            MAINICON,0,14,9,20,20
@@ -52,7 +52,7 @@ BEGIN
     PUSHBUTTON   "Minimize Window",MYCLOSER,355,225,105,20,WS_GROUP
     LTEXT           "Software Engineers: Avery Tarasov, Grégori Macário Harbs",-1,49,21,300,8
     LTEXT           "Language: Raw C++ / Win32 API, mingw-w64-x86_64-gcc 12.2.0",-1,49,31,300,8
-    LTEXT           "Open Source Libs: PCRE2 10.42, wolfSSL v5.5.3, Crypto++ 8.7.0, cURL 7.86.0, Apriorit mhook 2.5.1, PAExec 1.29, Inno Setup 6.2.1",-1,49,41,495,8
+    LTEXT           "Open Source Libs: PCRE2 10.42, wolfSSL v5.5.4, Crypto++ 8.7.0, cURL 7.87.0, Apriorit mhook 2.5.1, PAExec 1.29, Inno Setup 6.2.1",-1,49,41,495,8
     LTEXT           "Contact: avery@deeptide.com",-1,49,51,300,8
     EDITTEXT       LICTEST,49,61,300,100,     ES_MULTILINE | WS_TABSTOP  | WS_VSCROLL | ES_AUTOVSCROLL | ES_READONLY
  	CONTROL "",STC_BMP,"Static",WS_VISIBLE|SS_BITMAP,49,165,285,251

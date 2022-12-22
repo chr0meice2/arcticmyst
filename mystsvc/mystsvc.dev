@@ -4,14 +4,14 @@ Name=mystsvc
 Type=0
 Ver=2
 ObjFiles=
-Includes=C:\wolfssl-5.5.3
-Libs=C:\wolfssl-5.5.3
+Includes=C:\wolfssl-5.5.4
+Libs=
 PrivateResource=
 ResourceIncludes=
 MakeIncludes=
 Compiler=
 CppCompiler=-static -static-libgcc  -static-libstdc++ -std=c++17_@@_
-Linker=C:/pcre2-10.42/.libs/libpcre2-8.a_@@_C:/msys64/MinGW64/lib/libws2_32.a_@@_C:/wolfssl-5.5.3/src/.libs/libwolfssl.a_@@_C:/msys64/MinGW64/lib/libwsock32.a_@@_C:/msys64/mingw64/lib/libcrypt32.a_@@_C:/msys64/mingw64/lib/libole32.a_@@_C:/msys64/mingw64/lib/libsecur32.a_@@_C:/msys64/mingw64/lib/libuuid.a_@@_c:/msys64/mingw64/lib/libstdc++.a_@@_c:/msys64/mingw64/lib/gcc/x86_64-w64-mingw32/12.2.0/libgcc.a_@@_C:/msys64/mingw64/lib/gcc/x86_64-w64-mingw32/12.2.0/libgcc_eh.a_@@_
+Linker=C:/pcre2-10.42/.libs/libpcre2-8.a_@@_C:/msys64/MinGW64/lib/libws2_32.a_@@_C:/wolfssl-5.5.4/src/.libs/libwolfssl.a_@@_C:/msys64/MinGW64/lib/libwsock32.a_@@_C:/msys64/mingw64/lib/libcrypt32.a_@@_C:/msys64/mingw64/lib/libole32.a_@@_C:/msys64/mingw64/lib/libsecur32.a_@@_C:/msys64/mingw64/lib/libuuid.a_@@_c:/msys64/mingw64/lib/libstdc++.a_@@_c:/msys64/mingw64/lib/gcc/x86_64-w64-mingw32/12.2.0/libgcc.a_@@_C:/msys64/mingw64/lib/gcc/x86_64-w64-mingw32/12.2.0/libgcc_eh.a_@@_
 IsCpp=1
 Icon=
 ExeOutput=
