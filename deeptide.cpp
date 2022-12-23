@@ -111,7 +111,7 @@ static bool FirstRegHCKU=true;
 
 static std::string DeviceForC="";
 
-static const char VER_STRING[]="20221221a";
+static const char VER_STRING[]="20221222a";
 
 static const char UN_FULL[]="^\\x5cDevice\\x5cHarddiskVolume\\d+\\x5cprogramdata\\x5carcticmyst\\x5cunins000\\x2eexe$";
 static const char UN_SHORT[]="unins000.exe";
@@ -1684,7 +1684,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT message,WPARAM wParam,LPARAM lPar
 			
 			
     		pEncryptedText.clear();
-			copyp.size();
+			copyp.clear();
 
 
 			{
@@ -1700,6 +1700,10 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT message,WPARAM wParam,LPARAM lPar
 				pParms->Pid = std::stol(ParsedPid);
 				pParms->Tid = std::stol(ParsedTid);				
 				
+
+				//delete pParms;
+		
+				
 				
 				HANDLE ll=myCreateThread(0,0,InjectProcessThread,pParms,0,&shadeLog);
 				if( ll==0)
@@ -1710,6 +1714,9 @@ static LRESULT CALLBACK WndProc(HWND hwnd,UINT message,WPARAM wParam,LPARAM lPar
 				}
 
 				(*myCloseHandle)( ll);	
+
+				
+				
 				
 				
 
@@ -5353,6 +5360,8 @@ static DWORD __stdcall InjectProcessThread(LPVOID lp)
 		if ( pParms->Tid > 1 ) {
 			HANDLE h=myOpenThread(THREAD_SUSPEND_RESUME , false , pParms->Tid );
 			if (h) { 
+
+				//OutputDebugStringA("is this ever reached?");
 				myResumeThread(h); 
 				myCloseHandle(h);
 			}

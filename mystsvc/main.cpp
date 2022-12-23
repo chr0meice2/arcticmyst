@@ -79,7 +79,7 @@ static const char DOMAIN[]="deeptide.com";
 static const char FAIL[]="[NA]";
 static const char PA_MD5[]="ab50d8d707b97712178a92bbac74ccc2a5699eb41c17aa77f713ff3e568dcedb";
 static const char PA_PATH[]="C:\\programdata\\arcticmyst\\paexec.exe";
-static const char MAIN_MD5[]=_mainexe;
+//static const char MAIN_MD5[]=_mainexe;
 static const char MAIN_PATH[]="C:\\programdata\\arcticmyst\\arcticmyst.exe";
 static const char UPG_PATH[]="C:\\programdata\\arcticmyst\\mystinstaller.exe";
 
@@ -474,14 +474,7 @@ DWORD WINAPI ServiceWorkerThread (LPVOID lpParam)
 				{
 					goto failed;
 				}
-				if( ReadAndHash(MAIN_PATH,MainHashOut) == false)
-				{
-					goto failed;
-				}
-				if(MainHashOut!=MAIN_MD5)
-				{
-					goto failed;
-				}
+
 			//	OutputDebugStringA("launch before critical");
 				//make sure we are not running the existing arcticmyst.exe when an upgrade is happening
 				EnterCriticalSection(&UpgradeCritical);
