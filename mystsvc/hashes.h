@@ -1,3 +1,3 @@
-#define _hash32 "b53f204e3e2b04987b2f732b42b7ea91d361c359054ceef856604de020de3819" 
-#define _hash64 "dd31a343748bb1aacfca7209697e60e93ff8ab1d2cdb7dfab9c428efe9eb5fb9" 
-#define _mainexe "41421ae31b66710cfecb578b514c1889cf6c0df26b6d7fc5037de2a4326ec974" 
+#define _hash32 "6ef7a0f521264350dcbf383ef8bf41adcfb7ead67d03cd0e983e8387913e6c79" 
+#define _hash64 "d281c04d0a4742e7f6ce1d6514554c8a98b20ad68e61427f8a2b3bacd1fbe2df" 
+#define _mainexe "63cf80b62b0138f501c2d33838a8f3d1435d84b2eacd64dfafbc71e3f1f1a435" 

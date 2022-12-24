@@ -288,17 +288,7 @@ DWORD __stdcall SendMessageThread(LPVOID lp)
 extern "C" __declspec(dllexport) WINAPI void SafeUnhookCRT(void *Dummylol)
 {
 
-	if(UnhookNeeded)
-	{
-		MH_DisableHook(&NtCreateUserProcess);
-	}
 
-
-    if(CleanupNeeded)
-	{
-		MH_Uninitialize();
-	
-	}
 
 
 	FreeLibraryAndExitThread(Dummylol,0);
@@ -352,7 +342,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL,DWORD fdwReason,LPVOID lpvReserved)
 		{			
 			
 
-		//DisableThreadLibraryCalls(hinstDLL);
+		DisableThreadLibraryCalls(hinstDLL);
 
         HANDLE hThread = CreateThread(nullptr, 0, ProcAttachThread, nullptr, 0, nullptr);
         if (hThread != nullptr) {
@@ -365,6 +355,18 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL,DWORD fdwReason,LPVOID lpvReserved)
 		case DLL_PROCESS_DETACH:
 		{
 
+
+			if(UnhookNeeded)
+			{
+				MH_DisableHook(MH_ALL_HOOKS);
+			}
+
+
+			if(CleanupNeeded)
+			{
+				MH_Uninitialize();
+			
+			}
 
 	
 

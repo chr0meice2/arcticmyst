@@ -1056,9 +1056,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		return 0;
 	}
 
-	const int enabledint=1;
+	const DWORD enabledint=1;
 	const char enablecmd[]="ProcessCreationIncludeCmdLine_Enabled";
-	if (   myRegSetValueExA(regKey,enablecmd,0,REG_DWORD,(unsigned char*)&enabledint,sizeof(int) ) !=ERROR_SUCCESS)
+	if (   myRegSetValueExA(regKey,enablecmd,0,REG_DWORD,(unsigned char*)&enabledint,sizeof(DWORD) ) !=ERROR_SUCCESS)
 	{
 
 		myRegCloseKey(regKey);

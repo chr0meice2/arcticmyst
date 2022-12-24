@@ -4,3 +4,5 @@ pacman -S base-devel *
 pacman -Syu
 
 
+    pacman -S mingw-w64-i686-MinHook
+   pacman -S mingw-w64-x86_64-MinHook
