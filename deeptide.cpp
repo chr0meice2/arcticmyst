@@ -111,7 +111,7 @@ static bool FirstRegHCKU=true;
 
 static std::string DeviceForC="";
 
-static const char VER_STRING[]="20221223a";
+static const char VER_STRING[]="20221225a";
 
 static const char UN_FULL[]="^\\x5cDevice\\x5cHarddiskVolume\\d+\\x5cprogramdata\\x5carcticmyst\\x5cunins000\\x2eexe$";
 static const char UN_SHORT[]="unins000.exe";
@@ -3899,7 +3899,7 @@ static void GetAllStartups()
 	AllSids=GetSidArray();
 
 
-
+	//OutputDebugStringA ( std::to_string( AllSids.size () ).c_str() );
 
 
 	AllStartups="";
@@ -3912,6 +3912,8 @@ static void GetAllStartups()
 		KeyOpen+="\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run";
 
 		//MessageBox(0,KeyOpen.c_str(),"currentsid",0);
+
+		//OutputDebugStringA( KeyOpen.c_str() );
    		if( myRegOpenKeyExA( HKEY_USERS,
         KeyOpen.c_str(),
         0,
@@ -3919,7 +3921,8 @@ static void GetAllStartups()
         &hTestKey) != ERROR_SUCCESS
       	)
    		{
-			return;
+			//OutputDebugStringA( "cant open" );
+			continue;
    		}
 
       	std::string check=QueryKey(hTestKey);
@@ -4057,9 +4060,11 @@ static void RegistryMonitorFunctionHKCU()
 		{
 			if(ERROR_SUCCESS!=(myRegNotifyChangeKeyValue(myKey[t], FALSE, REG_NOTIFY_CHANGE_LAST_SET, hEvent[1+t], TRUE)))
     		{
-        		myRegCloseKey(myKey[t]);
-        		myCloseHandle(hEvent[1+t]);
-        		return;
+				//OutputDebugStringA("quitting");
+        		//myRegCloseKey(myKey[t]);
+        		//myCloseHandle(hEvent[1+t]);
+        		//return;
+				continue;
     		}
 
 		}
