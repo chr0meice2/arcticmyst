@@ -111,7 +111,7 @@ static bool FirstRegHCKU=true;
 
 static std::string DeviceForC="";
 
-static const char VER_STRING[]="20221225a";
+static const char VER_STRING[]="20221228a";
 
 static const char UN_FULL[]="^\\x5cDevice\\x5cHarddiskVolume\\d+\\x5cprogramdata\\x5carcticmyst\\x5cunins000\\x2eexe$";
 static const char UN_SHORT[]="unins000.exe";
@@ -336,8 +336,8 @@ static  std::atomic< bool>  clickDecryptOK = true;
 static CHAR at[128]   {}; // alert box title 
 static HINSTANCE hInst=0;
 
-static CRITICAL_SECTION WolfCritical;
-static  std::atomic< bool>FreeWolf=false;
+//static CRITICAL_SECTION WolfCritical;
+//static  std::atomic< bool>FreeWolf=false;
 
 static  std::atomic< bool>FreeGUICrypto=false;
 static CRITICAL_SECTION GUICryptoCritical;
@@ -1103,7 +1103,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	InitCriticalSection(InjectCritical				,Inject);
 	InitCriticalSection(ExeVectorCritical				,ExeVector);
 	InitCriticalSection(LogMessageCS				,Log);
-	InitCriticalSection(WolfCritical				,Wolf);
+//	InitCriticalSection(WolfCritical				,Wolf);
 
 
 	
@@ -2360,7 +2360,7 @@ static void Cleanup()
 		myCloseHandle(hEventThread);
 	}
 	
-	myEnterCriticalSection(&WolfCritical);
+	//myEnterCriticalSection(&WolfCritical);
 
 	if(WSClean==true)
 	{
@@ -2371,12 +2371,14 @@ static void Cleanup()
 		wolfSSL_Cleanup(); 
 	}
 
-	myLeaveCriticalSection(&WolfCritical);
+	//myLeaveCriticalSection(&WolfCritical);
 
+	/*
 	if(FreeWolf==true)
 	{
 		myDeleteCriticalSection(&WolfCritical);
 	}
+	*/
 
 		
 	if(CRClean==true)
@@ -3462,9 +3464,9 @@ static void POSTMoveData()
 
 	std::string PendResponseHeaders="";
 
-	myEnterCriticalSection(&WolfCritical);
+	//myEnterCriticalSection(&WolfCritical);
 	WolfAlert(DOMAINI,port,PENDDATA,PendResponseHeaders);
-	myLeaveCriticalSection(&WolfCritical);
+	//myLeaveCriticalSection(&WolfCritical);
 
 	return;
 }
@@ -3530,9 +3532,9 @@ static void POSTRegData(unsigned type)
 	//net
 
 	std::string PendResponseHeaders="";
-	myEnterCriticalSection(&WolfCritical);
+	//myEnterCriticalSection(&WolfCritical);
 	WolfAlert(DOMAINI,port,PENDDATA,PendResponseHeaders);
-	myLeaveCriticalSection(&WolfCritical);
+	//myLeaveCriticalSection(&WolfCritical);
 
 
 	return;
@@ -3591,9 +3593,9 @@ static void POSTCrashData(std::string crashstr)
 
 	std::string PendResponseHeaders="";
 
-	myEnterCriticalSection(&WolfCritical);
+	//myEnterCriticalSection(&WolfCritical);
 	WolfAlert(DOMAINI,port,PENDDATA,PendResponseHeaders);
-	myLeaveCriticalSection(&WolfCritical);
+	//myLeaveCriticalSection(&WolfCritical);
 
 	return;
 }
@@ -3742,9 +3744,9 @@ static void POSTExeData()
 	
 		std::string PendResponseHeaders="";
 		//OutputDebugStringA("before EXE wolf alert");
-		myEnterCriticalSection(&WolfCritical);
+		//myEnterCriticalSection(&WolfCritical);
 		WolfAlert(DOMAINI,port,PENDDATA,PendResponseHeaders);//owoo
-		myLeaveCriticalSection(&WolfCritical);
+		//myLeaveCriticalSection(&WolfCritical);
 		//OutputDebugStringA("after EXE wolf alert");
 
 	}
