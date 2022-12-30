@@ -27,6 +27,7 @@
 #include <winternl.h>
 #include <ntstatus.h>
 #include <appmodel.h>
+#include <Mswsock.h>
 
 //#include "t:/deeptide/hashes.h"
 #include "c:/cryptopp870/cryptlib.h"
@@ -392,6 +393,18 @@ static decltype( SafeUnhookParams) *myReal_SafeUnhook=nullptr;
 
 ////
 
+static decltype(ioctlsocket) *myioctlsocket=nullptr;
+
+static decltype(WSAEventSelect) *myWSAEventSelect=nullptr;
+
+static decltype(bind) *mybind=nullptr;
+
+static decltype(WSASocketA) *myWSASocketA=nullptr;
+
+static decltype(WSAGetOverlappedResult) *myWSAGetOverlappedResult=nullptr;
+static decltype(WSAGetLastError) *myWSAGetLastError=nullptr;
+
+static decltype(WSAIoctl) *myWSAIoctl=nullptr;
 
 
 static decltype(GetAddrInfoExW) *myGetAddrInfoExW=nullptr;
@@ -559,10 +572,10 @@ static decltype(WSAStartup) *myWSAStartup=nullptr;
 static decltype(WaitForSingleObject) *myWaitForSingleObject=nullptr;
 static decltype(WaitForMultipleObjects) *myWaitForMultipleObjects=nullptr;
 
-static decltype(connect) *myconnect=nullptr;
+//static decltype(connect) *myconnect=nullptr;
 //static decltype(gethostbyname) *mygethostbyname=nullptr;
 static decltype(htons) *myhtons=nullptr;
-static decltype(socket) *mysocket=nullptr;
+//static decltype(socket) *mysocket=nullptr;
 static decltype(LoadBitmapA) *myLoadBitmapA=nullptr;
 static decltype(DeleteObject) *myDeleteObject=nullptr;
 
@@ -718,6 +731,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		return 0;
 	}
 
+
+	myioctlsocket=(decltype(ioctlsocket)*)((void*)GetProcAddress(m.w32,"ioctlsocket"));
+
+	myWSAEventSelect=(decltype(WSAEventSelect)*)((void*)GetProcAddress(m.w32,"WSAEventSelect"));
+
+	mybind=(decltype(bind)*)((void*)GetProcAddress(m.w32,"bind"));
+
+	myWSASocketA=(decltype(WSASocketA)*)((void*)GetProcAddress(m.w32,"WSASocketA"));
+	myWSAGetOverlappedResult=(decltype(WSAGetOverlappedResult)*)((void*)GetProcAddress(m.w32,"WSAGetOverlappedResult"));
+	myWSAGetLastError=(decltype(WSAGetLastError)*)((void*)GetProcAddress(m.w32,"WSAGetLastError"));
+
+	myWSAIoctl=(decltype(WSAIoctl)*)((void*)GetProcAddress(m.w32,"WSAIoctl"));
 
 	myGetAddrInfoExW=(decltype(GetAddrInfoExW)*)((void*)GetProcAddress(m.w32,"GetAddrInfoExW"));
 	myFreeAddrInfoExW=(decltype(FreeAddrInfoExW)*)((void*)GetProcAddress(m.w32,"FreeAddrInfoExW"));
@@ -890,16 +915,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	myWaitForSingleObject=(decltype(WaitForSingleObject)*)((void*)GetProcAddress(m.k32,"WaitForSingleObject"));
 	myWaitForMultipleObjects=(decltype(WaitForMultipleObjects)*)((void*)GetProcAddress(m.k32,"WaitForMultipleObjects"));
 
-	myconnect=(decltype(connect)*)((void*)GetProcAddress(m.w32,"connect"));
+	//myconnect=(decltype(connect)*)((void*)GetProcAddress(m.w32,"connect"));
 	//mygethostbyname=(decltype(gethostbyname)*)((void*)GetProcAddress(m.w32,"gethostbyname"));
 	myhtons=(decltype(htons)*)((void*)GetProcAddress(m.w32,"htons"));
-	mysocket=(decltype(socket)*)((void*)GetProcAddress(m.w32,"socket"));
+	//mysocket=(decltype(socket)*)((void*)GetProcAddress(m.w32,"socket"));
 
 
 	ptrShell_NotifyIconA=(decltype(Shell_NotifyIconA)*)((void*)GetProcAddress(m.sh32,"Shell_NotifyIconA"));
 
 
-	if(!  (myFreeAddrInfoExW&&myGetAddrInfoExW&&myInitializeCriticalSectionAndSpinCount&&myIsImmersiveProcess&&myDestroyWindow&&myExitThread&&myTerminateProcess&&myPostQuitMessage&&myResetEvent&&mySetEvent&&myRegSetValueExA&&myExitProcess&&myEvtClose&&myEvtSubscribe&&myEvtRender&&myGetFileSizeEx&&myGetUserNameExA&&myGetUserNameA&&myWideCharToMultiByte&&ptrSHGetKnownFolderPath&&ptrCoTaskMemFree&&myCreatePipe&&myGetExitCodeProcess&&mySetHandleInformation&&myGetStdHandle&&myOpenThread&&myResumeThread&&myRegisterWaitForSingleObject&&myUnregisterWait&&myQueryDosDeviceA&&myGetProcessImageFileNameA&&myChangeWindowMessageFilterEx&&myclosesocket && myVirtualFreeEx && myCryptUnprotectMemory&&myGetModuleInformation&&myGetExitCodeThread&&myCreateRemoteThread&&myWriteProcessMemory && myVirtualAllocEx&&myEnumProcessModulesEx&& myGetModuleFileNameExA && myReal_LoadLibraryA && myReadProcessMemory && myIsWow64Process && myCreateFileA && myReadFile && myCryptAcquireContextA && myCryptCreateHash && myCryptDestroyHash && myCryptGetHashParam && myCryptHashData && myCryptReleaseContext && myWTSQueryUserToken && myProcessIdToSessionId && myCreateProcessAsUserA && myGetShellWindow && myGetWindowThreadProcessId && myInitializeProcThreadAttributeList && myUpdateProcThreadAttribute  && myLoadBitmapA && myDeleteObject && myWaitForMultipleObjects && myRegEnumValueA && myRegQueryInfoKeyA && myRegEnumKeyExA && myCreateEventA && myRegNotifyChangeKeyValue && myCloseHandle && myConvertSidToStringSidA   && myCreatePopupMenu && myCreateProcessA && myCreateThread && myCreateToolhelp32Snapshot && myCreateWindowExA  && myDefWindowProcA && myDeleteCriticalSection  && myDialogBoxParamA && myDispatchMessageA && myEndDialog && myEnterCriticalSection && myFindResourceA && myGetComputerNameA && myGetCursorPos  && myGetDlgItem   && myGetMessageA && myGetModuleHandleA && myGetProcessHeap  && myGetTokenInformation && myHeapAlloc && myHeapFree && myInsertMenuA && myLeaveCriticalSection  && myLoadCursorA && myLoadIconA && myLoadResource && myLocalFree && myLockResource && myLookupAccountSidA && myMessageBoxIndirectA && myOpenProcess && myOpenProcessToken && myProcess32First && myProcess32Next   && myRegCloseKey && myRegOpenKeyExA && myRegQueryValueExA && myRegisterClassExA && myRegisterWindowMessageA && mySendMessageA  && mySetForegroundWindow  && mySetThreadPriority && mySetWindowPos && myShowWindow && myShowWindowAsync && mySizeofResource && mySleep  && myTrackPopupMenu && myTranslateMessage && myUpdateWindow  && myWSACleanup && myWSAStartup && myWaitForSingleObject && myconnect  && myhtons && mysocket   && ptrShell_NotifyIconA )  )
+	if(!  (myioctlsocket&&myWSAEventSelect&&mybind&&myWSASocketA&&myWSAGetLastError&&myWSAGetOverlappedResult&&myWSAIoctl&&myFreeAddrInfoExW&&myGetAddrInfoExW&&myInitializeCriticalSectionAndSpinCount&&myIsImmersiveProcess&&myDestroyWindow&&myExitThread&&myTerminateProcess&&myPostQuitMessage&&myResetEvent&&mySetEvent&&myRegSetValueExA&&myExitProcess&&myEvtClose&&myEvtSubscribe&&myEvtRender&&myGetFileSizeEx&&myGetUserNameExA&&myGetUserNameA&&myWideCharToMultiByte&&ptrSHGetKnownFolderPath&&ptrCoTaskMemFree&&myCreatePipe&&myGetExitCodeProcess&&mySetHandleInformation&&myGetStdHandle&&myOpenThread&&myResumeThread&&myRegisterWaitForSingleObject&&myUnregisterWait&&myQueryDosDeviceA&&myGetProcessImageFileNameA&&myChangeWindowMessageFilterEx&&myclosesocket && myVirtualFreeEx && myCryptUnprotectMemory&&myGetModuleInformation&&myGetExitCodeThread&&myCreateRemoteThread&&myWriteProcessMemory && myVirtualAllocEx&&myEnumProcessModulesEx&& myGetModuleFileNameExA && myReal_LoadLibraryA && myReadProcessMemory && myIsWow64Process && myCreateFileA && myReadFile && myCryptAcquireContextA && myCryptCreateHash && myCryptDestroyHash && myCryptGetHashParam && myCryptHashData && myCryptReleaseContext && myWTSQueryUserToken && myProcessIdToSessionId && myCreateProcessAsUserA && myGetShellWindow && myGetWindowThreadProcessId && myInitializeProcThreadAttributeList && myUpdateProcThreadAttribute  && myLoadBitmapA && myDeleteObject && myWaitForMultipleObjects && myRegEnumValueA && myRegQueryInfoKeyA && myRegEnumKeyExA && myCreateEventA && myRegNotifyChangeKeyValue && myCloseHandle && myConvertSidToStringSidA   && myCreatePopupMenu && myCreateProcessA && myCreateThread && myCreateToolhelp32Snapshot && myCreateWindowExA  && myDefWindowProcA && myDeleteCriticalSection  && myDialogBoxParamA && myDispatchMessageA && myEndDialog && myEnterCriticalSection && myFindResourceA && myGetComputerNameA && myGetCursorPos  && myGetDlgItem   && myGetMessageA && myGetModuleHandleA && myGetProcessHeap  && myGetTokenInformation && myHeapAlloc && myHeapFree && myInsertMenuA && myLeaveCriticalSection  && myLoadCursorA && myLoadIconA && myLoadResource && myLocalFree && myLockResource && myLookupAccountSidA && myMessageBoxIndirectA && myOpenProcess && myOpenProcessToken && myProcess32First && myProcess32Next   && myRegCloseKey && myRegOpenKeyExA && myRegQueryValueExA && myRegisterClassExA && myRegisterWindowMessageA && mySendMessageA  && mySetForegroundWindow  && mySetThreadPriority && mySetWindowPos && myShowWindow && myShowWindowAsync && mySizeofResource && mySleep  && myTrackPopupMenu && myTranslateMessage && myUpdateWindow  && myWSACleanup && myWSAStartup && myWaitForSingleObject   && myhtons    && ptrShell_NotifyIconA )  )
 	{
 
 		//MessageBox(0,"failed to find func","shouldn't occur",0);
@@ -3100,42 +3125,45 @@ static void WolfAlert(const wchar_t *domain,const unsigned short port,std::strin
 	int TotalReceived=0;
 	response="";
 
-    int                sockfd=0;
+     SOCKET              sockfd=INVALID_SOCKET;
     struct sockaddr_in sa{};
   	//memset(&sa, 0, sizeof(sa));
     char               buff[256]{};
    	//memset(buff, 0, sizeof(buff));
     //size_t             len;
-    WOLFSSL_CTX* ctx;
-    WOLFSSL*     ssl;
+    WOLFSSL_CTX* ctx = NULL;
+    WOLFSSL*     ssl = NULL;
 	long long unsigned int ret;
 	//struct hostent *h;
-	int iResult;
-	HANDLE hHandles[2];
-	
-	PADDRINFOEXW DnsResult;
-	OVERLAPPED tAsync;
-	tAsync.hEvent = myCreateEventA( NULL , TRUE , FALSE , NULL );
-	if (!tAsync.hEvent) { return; }
+	int iResult, err;
+	HANDLE hAsyncEvent, hHandles[2];
+	DWORD dwDummy = 0;
+	GUID guid = WSAID_CONNECTEX;
+	LPFN_CONNECTEX ConnectExPtr = NULL;
+	PADDRINFOEXW DnsResult = NULL;
+	OVERLAPPED tAsync = {};
+	u_long NonBlocking;
+	//int devid=0;
+	tAsync.hEvent = hAsyncEvent = myCreateEventA( NULL , TRUE , FALSE , NULL );
+	if (!hAsyncEvent) { return; }
+
+	hHandles[0] = tAsync.hEvent;		
+	hHandles[1] = hQuitEvent;
+
 	//myResetEvent( tAsync.hEvent );
 	
 	//OutputDebugStringW(domain);
-
+	
 	iResult = myGetAddrInfoExW( domain , NULL , NS_DNS , NULL , NULL , &DnsResult , NULL , &tAsync , NULL , NULL );	
 	if ((iResult != ERROR_SUCCESS) && (iResult != ERROR_IO_PENDING)) {
-		myCloseHandle( tAsync.hEvent );
+		goto cleanup;
 	}
-	if (iResult == ERROR_SUCCESS) { //it worked right away		
-		myCloseHandle( tAsync.hEvent );
-	} else { // (iResult == ERROR_IO_PENDING) {
+	if (iResult != ERROR_SUCCESS) { //it worked right away
 		//it's asynchornous
-		hHandles[0] = tAsync.hEvent;		
-		hHandles[1] = hQuitEvent;
-		iResult = myWaitForMultipleObjects( 2 , hHandles , FALSE , 12*1000 );		
-		myCloseHandle( tAsync.hEvent );
-		if (iResult != (WAIT_OBJECT_0)) { myFreeAddrInfoExW( DnsResult ); return; }
+		iResult = myWaitForMultipleObjects( 2 , hHandles , FALSE , 12*1000 );
+		if (iResult != (WAIT_OBJECT_0)) { goto cleanup; }
 	}
-	
+		
 	//OutputDebugStringA("DNS success!");
     /*h=mygethostbyname(domain);
     if(h==0) { return; }    
@@ -3146,92 +3174,131 @@ static void WolfAlert(const wchar_t *domain,const unsigned short port,std::strin
 	memcpy( &sa , DnsResult->ai_addr , sizeof(sa) ); //copy & cleanup already
 	//sa.sin_family=DnsResult->ai_family;
 	sa.sin_port=myhtons(port);
-	myFreeAddrInfoExW( DnsResult );
+	myFreeAddrInfoExW( DnsResult ); DnsResult = NULL;
 	
- 	if ((sockfd = mysocket(AF_INET, SOCK_STREAM, 0)) == -1) 
+ 	if ((sockfd = myWSASocketA(AF_INET, SOCK_STREAM, 0, NULL , 0 , WSA_FLAG_OVERLAPPED )) == INVALID_SOCKET) 
 	{
-         return;
+         goto cleanup;
     }
 	//if (IsQuitEventSignaled()) { myclosesocket(sockfd); return; }
-		
-	//TODO: make connection asynchronous so we can use an event
- 	if (myconnect(sockfd, (struct sockaddr*) &sa, sizeof(sa))== -1)
+
+	{ //need to bind the socket for ConnectEx
+		struct sockaddr_in addr = {};        
+        addr.sin_family = AF_INET;
+        addr.sin_addr.s_addr = INADDR_ANY;
+        //addr.sin_port = 0;
+        //rc = bind(sockfd, (SOCKADDR*) &addr, sizeof(addr));	
+		if ( mybind(sockfd,(SOCKADDR*) &addr, sizeof(addr)) ) {
+			goto cleanup;
+		}
+	}
+
+	if (myWSAIoctl(sockfd, SIO_GET_EXTENSION_FUNCTION_POINTER,
+    (void*)&guid, sizeof(guid), (void*)&ConnectExPtr, sizeof(ConnectExPtr), &dwDummy, NULL, NULL)) 
 	{
+		goto cleanup;
+	}
+	if (!ConnectExPtr) { goto cleanup; }
+	
+	OutputDebugStringA("Connecting..");
 
-		 myclosesocket(sockfd);
-	     return;
-    }
-	if (IsQuitEventSignaled()) { myclosesocket(sockfd); return; }
-	//OutputDebugStringA("Connected!");
+	myResetEvent( tAsync.hEvent ); //must reset the event to reuse it
+    
+	memset( &tAsync , 0 , sizeof(tAsync) ); tAsync.hEvent = hAsyncEvent;
+	if (!ConnectExPtr(sockfd, (struct sockaddr*) &sa, sizeof(sa), NULL , 0 , &dwDummy , &tAsync )) {
+		iResult = myWSAGetLastError();
+		{
+			char zBuff[64];
+			sprintf(zBuff,"Result = %i\n",iResult);
+			OutputDebugStringA(zBuff);
+		}
+		if ( iResult != ERROR_IO_PENDING ) { goto cleanup; }
+		OutputDebugStringA("Waiting...");		
+		iResult = myWaitForMultipleObjects( 2 , hHandles , FALSE , 30*1000 );
+		if (iResult != (WAIT_OBJECT_0)) { goto cleanup; }		
+		OutputDebugStringA("myWSAGetOverlappedResult");
+		if (!myWSAGetOverlappedResult( sockfd , &tAsync , &dwDummy , TRUE , &dwDummy )) {
+			goto cleanup;
+		}		
+ 	}
+	OutputDebugStringA("Connected!");
 
-    if((ctx = wolfSSL_CTX_new(wolfTLSv1_3_client_method()))==NULL)
+    if((ctx = wolfSSL_CTX_new(wolfTLSv1_3_client_method()))==NULL)	
 	{
-
-         myclosesocket(sockfd);
-		return;
+		goto cleanup;
     }
-	if (IsQuitEventSignaled()) { myclosesocket(sockfd); return; }
-
-
+	if (IsQuitEventSignaled()) { goto cleanup; }
+	
+	//wolfSSL_CTX_SetDevId( ctx , wolfSSL_CTX_UseAsync );
 	wolfSSL_CTX_set_verify(ctx, WOLFSSL_VERIFY_NONE, 0);
 
     if ( IsQuitEventSignaled() || ((ssl = wolfSSL_new(ctx)) == NULL) )
 	{
-		myclosesocket(sockfd);
-		wolfSSL_CTX_free(ctx); 
-		return ;
+		goto cleanup;
     }
-	
-	
 
 
 
     if (wolfSSL_set_fd(ssl, sockfd) != WOLFSSL_SUCCESS)
 	{
+		goto cleanup;
+    }	
 
+	OutputDebugString("Before Connect");
+	NonBlocking = 1; myioctlsocket( sockfd , FIONBIO , &NonBlocking );
 
-		myclosesocket(sockfd);
-    	wolfSSL_free(ssl);  
-		wolfSSL_CTX_free(ctx); 
-		return;
-    }
-
-
-
-
+	/*
     if ( IsQuitEventSignaled() || (wolfSSL_connect(ssl) != SSL_SUCCESS) )
 	{
-
-
-		myclosesocket(sockfd);
-    	wolfSSL_free(ssl);  
-		wolfSSL_CTX_free(ctx); 
-		return ;
-
+		goto cleanup; 
     }
+	*/
 
+	myResetEvent( hAsyncEvent ); //reset for the first time
+	myWSAEventSelect( sockfd , hAsyncEvent , FD_READ | FD_CLOSE );
 
+	do {
+		OutputDebugString("trying to connect...");
+		iResult = wolfSSL_connect(ssl);      		
+  		err = wolfSSL_get_error(ssl, iResult);		
+		if (iResult == WOLFSSL_SUCCESS) { break; }
+        if (err == WOLFSSL_ERROR_WANT_READ) {			
+			if (myWaitForMultipleObjects( 2 , hHandles , FALSE , 12*1000 ) != WAIT_OBJECT_0) {
+				OutputDebugStringA("Connect Timeout!");
+				goto cleanup; 
+			}
+		}
+    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE); 
+	if (iResult != WOLFSSL_SUCCESS) {
+		OutputDebugString("failed to connect...");
+		goto cleanup; 
+	}
+	//OutputDebugString("SSL_Connect Success");
+	
+	
 
+	NonBlocking = 0; myioctlsocket( sockfd , FIONBIO , &NonBlocking );
+	OutputDebugString("After Connect");
+	
 	ret = wolfSSL_write(ssl, POST.c_str(),POST.size());
 	if ( IsQuitEventSignaled() || (ret!=POST.size()) )
 	{
-	
-
-		myclosesocket(sockfd);
-    	wolfSSL_free(ssl);  
-		wolfSSL_CTX_free(ctx); 
-		return;
-
+		goto cleanup;
 	}
 
-
-
-
+	myResetEvent( hAsyncEvent ); //reset for the first time
+	myWSAEventSelect( sockfd , hAsyncEvent , FD_READ | FD_CLOSE );
+	
 	while(1)
 	{
-		memset(buff,0x0,sizeof(buff));
+		memset(buff,0x0,sizeof(buff));		
+		if (myWaitForMultipleObjects( 2 , hHandles , FALSE , 12*1000 ) != WAIT_OBJECT_0) {
+			OutputDebugStringA("Timeout!");
+			goto cleanup; 
+		}
+		myResetEvent( hAsyncEvent ); //reset and do the action that re-trigger it.
 		received=wolfSSL_read(ssl,buff,sizeof(buff)-1);
-		if ( IsQuitEventSignaled() || (received==-1) )
+		if (received==-1) 
 		{
 			goto cleanup;
 		}
@@ -3244,20 +3311,12 @@ static void WolfAlert(const wchar_t *domain,const unsigned short port,std::strin
 
 
 	cleanup:
-
-	//OutputDebugStringA("close");
-    myclosesocket(sockfd);
-
-
-
-	//OutputDebugStringA("wolfSSL_free");
-    wolfSSL_free(ssl);      
-
-	//OutputDebugStringA("wolfSSL_CTX_free");
-    wolfSSL_CTX_free(ctx); 
-
-
-        
+	
+	if (tAsync.hEvent) { myCloseHandle( tAsync.hEvent ); }
+	if (DnsResult) {  myFreeAddrInfoExW( DnsResult ); }
+    if (sockfd!=INVALID_SOCKET) { myclosesocket(sockfd); }
+    if (ssl) { wolfSSL_free(ssl); }
+    if (ctx) { wolfSSL_CTX_free(ctx); }
 
 	return;
 
