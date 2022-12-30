@@ -144,6 +144,8 @@ static std::string ws2s( const std::wstring &wstr );
 
 static void CALLBACK myAsyncWaitCallback(LPVOID pParm , BOOLEAN TimerOrWaitFired);
 
+static void WolfAlert(const wchar_t *domain,const unsigned short port,std::string &POST,std::string &response);
+
 static void launch_and_get_output2(char * cmdline_in,std::string &outbuf);
 
 static char* GetProcAddressEx( HANDLE hProcess , HMODULE hModule ,const char* pzName );
@@ -312,7 +314,7 @@ static HWND hBitmap = 0;
 
 
 
-static const char DOMAINI[]="deeptide.com";
+static const wchar_t DOMAINI[]=L"deeptide.com";
 static const unsigned short port = 443;
 static NOTIFYICONDATA tnid={};
 static HICON hIcon;
@@ -392,7 +394,8 @@ static decltype( SafeUnhookParams) *myReal_SafeUnhook=nullptr;
 
 
 
-
+static decltype(GetAddrInfoExW) *myGetAddrInfoExW=nullptr;
+static decltype(FreeAddrInfoExW) *myFreeAddrInfoExW=nullptr;
 
 static decltype(IsImmersiveProcess) *myIsImmersiveProcess=nullptr;
 
@@ -557,7 +560,7 @@ static decltype(WaitForSingleObject) *myWaitForSingleObject=nullptr;
 static decltype(WaitForMultipleObjects) *myWaitForMultipleObjects=nullptr;
 
 static decltype(connect) *myconnect=nullptr;
-static decltype(gethostbyname) *mygethostbyname=nullptr;
+//static decltype(gethostbyname) *mygethostbyname=nullptr;
 static decltype(htons) *myhtons=nullptr;
 static decltype(socket) *mysocket=nullptr;
 static decltype(LoadBitmapA) *myLoadBitmapA=nullptr;
@@ -716,6 +719,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	}
 
 
+	myGetAddrInfoExW=(decltype(GetAddrInfoExW)*)((void*)GetProcAddress(m.w32,"GetAddrInfoExW"));
+	myFreeAddrInfoExW=(decltype(FreeAddrInfoExW)*)((void*)GetProcAddress(m.w32,"FreeAddrInfoExW"));
+
+	
 
 	myIsImmersiveProcess=(decltype(IsImmersiveProcess)*)((void*)GetProcAddress(m.us32,"IsImmersiveProcess"));
 	myDestroyWindow=(decltype(DestroyWindow)*)((void*)GetProcAddress(m.us32,"DestroyWindow"));
@@ -884,7 +891,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	myWaitForMultipleObjects=(decltype(WaitForMultipleObjects)*)((void*)GetProcAddress(m.k32,"WaitForMultipleObjects"));
 
 	myconnect=(decltype(connect)*)((void*)GetProcAddress(m.w32,"connect"));
-	mygethostbyname=(decltype(gethostbyname)*)((void*)GetProcAddress(m.w32,"gethostbyname"));
+	//mygethostbyname=(decltype(gethostbyname)*)((void*)GetProcAddress(m.w32,"gethostbyname"));
 	myhtons=(decltype(htons)*)((void*)GetProcAddress(m.w32,"htons"));
 	mysocket=(decltype(socket)*)((void*)GetProcAddress(m.w32,"socket"));
 
@@ -892,10 +899,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	ptrShell_NotifyIconA=(decltype(Shell_NotifyIconA)*)((void*)GetProcAddress(m.sh32,"Shell_NotifyIconA"));
 
 
-	if(!  (myInitializeCriticalSectionAndSpinCount&&myIsImmersiveProcess&&myDestroyWindow&&myExitThread&&myTerminateProcess&&myPostQuitMessage&&myResetEvent&&mySetEvent&&myRegSetValueExA&&myExitProcess&&myEvtClose&&myEvtSubscribe&&myEvtRender&&myGetFileSizeEx&&myGetUserNameExA&&myGetUserNameA&&myWideCharToMultiByte&&ptrSHGetKnownFolderPath&&ptrCoTaskMemFree&&myCreatePipe&&myGetExitCodeProcess&&mySetHandleInformation&&myGetStdHandle&&myOpenThread&&myResumeThread&&myRegisterWaitForSingleObject&&myUnregisterWait&&myQueryDosDeviceA&&myGetProcessImageFileNameA&&myChangeWindowMessageFilterEx&&myclosesocket && myVirtualFreeEx && myCryptUnprotectMemory&&myGetModuleInformation&&myGetExitCodeThread&&myCreateRemoteThread&&myWriteProcessMemory && myVirtualAllocEx&&myEnumProcessModulesEx&& myGetModuleFileNameExA && myReal_LoadLibraryA && myReadProcessMemory && myIsWow64Process && myCreateFileA && myReadFile && myCryptAcquireContextA && myCryptCreateHash && myCryptDestroyHash && myCryptGetHashParam && myCryptHashData && myCryptReleaseContext && myWTSQueryUserToken && myProcessIdToSessionId && myCreateProcessAsUserA && myGetShellWindow && myGetWindowThreadProcessId && myInitializeProcThreadAttributeList && myUpdateProcThreadAttribute  && myLoadBitmapA && myDeleteObject && myWaitForMultipleObjects && myRegEnumValueA && myRegQueryInfoKeyA && myRegEnumKeyExA && myCreateEventA && myRegNotifyChangeKeyValue && myCloseHandle && myConvertSidToStringSidA   && myCreatePopupMenu && myCreateProcessA && myCreateThread && myCreateToolhelp32Snapshot && myCreateWindowExA  && myDefWindowProcA && myDeleteCriticalSection  && myDialogBoxParamA && myDispatchMessageA && myEndDialog && myEnterCriticalSection && myFindResourceA && myGetComputerNameA && myGetCursorPos  && myGetDlgItem   && myGetMessageA && myGetModuleHandleA && myGetProcessHeap  && myGetTokenInformation && myHeapAlloc && myHeapFree && myInsertMenuA && myLeaveCriticalSection  && myLoadCursorA && myLoadIconA && myLoadResource && myLocalFree && myLockResource && myLookupAccountSidA && myMessageBoxIndirectA && myOpenProcess && myOpenProcessToken && myProcess32First && myProcess32Next   && myRegCloseKey && myRegOpenKeyExA && myRegQueryValueExA && myRegisterClassExA && myRegisterWindowMessageA && mySendMessageA  && mySetForegroundWindow  && mySetThreadPriority && mySetWindowPos && myShowWindow && myShowWindowAsync && mySizeofResource && mySleep  && myTrackPopupMenu && myTranslateMessage && myUpdateWindow  && myWSACleanup && myWSAStartup && myWaitForSingleObject && myconnect && mygethostbyname && myhtons && mysocket   && ptrShell_NotifyIconA )  )
+	if(!  (myFreeAddrInfoExW&&myGetAddrInfoExW&&myInitializeCriticalSectionAndSpinCount&&myIsImmersiveProcess&&myDestroyWindow&&myExitThread&&myTerminateProcess&&myPostQuitMessage&&myResetEvent&&mySetEvent&&myRegSetValueExA&&myExitProcess&&myEvtClose&&myEvtSubscribe&&myEvtRender&&myGetFileSizeEx&&myGetUserNameExA&&myGetUserNameA&&myWideCharToMultiByte&&ptrSHGetKnownFolderPath&&ptrCoTaskMemFree&&myCreatePipe&&myGetExitCodeProcess&&mySetHandleInformation&&myGetStdHandle&&myOpenThread&&myResumeThread&&myRegisterWaitForSingleObject&&myUnregisterWait&&myQueryDosDeviceA&&myGetProcessImageFileNameA&&myChangeWindowMessageFilterEx&&myclosesocket && myVirtualFreeEx && myCryptUnprotectMemory&&myGetModuleInformation&&myGetExitCodeThread&&myCreateRemoteThread&&myWriteProcessMemory && myVirtualAllocEx&&myEnumProcessModulesEx&& myGetModuleFileNameExA && myReal_LoadLibraryA && myReadProcessMemory && myIsWow64Process && myCreateFileA && myReadFile && myCryptAcquireContextA && myCryptCreateHash && myCryptDestroyHash && myCryptGetHashParam && myCryptHashData && myCryptReleaseContext && myWTSQueryUserToken && myProcessIdToSessionId && myCreateProcessAsUserA && myGetShellWindow && myGetWindowThreadProcessId && myInitializeProcThreadAttributeList && myUpdateProcThreadAttribute  && myLoadBitmapA && myDeleteObject && myWaitForMultipleObjects && myRegEnumValueA && myRegQueryInfoKeyA && myRegEnumKeyExA && myCreateEventA && myRegNotifyChangeKeyValue && myCloseHandle && myConvertSidToStringSidA   && myCreatePopupMenu && myCreateProcessA && myCreateThread && myCreateToolhelp32Snapshot && myCreateWindowExA  && myDefWindowProcA && myDeleteCriticalSection  && myDialogBoxParamA && myDispatchMessageA && myEndDialog && myEnterCriticalSection && myFindResourceA && myGetComputerNameA && myGetCursorPos  && myGetDlgItem   && myGetMessageA && myGetModuleHandleA && myGetProcessHeap  && myGetTokenInformation && myHeapAlloc && myHeapFree && myInsertMenuA && myLeaveCriticalSection  && myLoadCursorA && myLoadIconA && myLoadResource && myLocalFree && myLockResource && myLookupAccountSidA && myMessageBoxIndirectA && myOpenProcess && myOpenProcessToken && myProcess32First && myProcess32Next   && myRegCloseKey && myRegOpenKeyExA && myRegQueryValueExA && myRegisterClassExA && myRegisterWindowMessageA && mySendMessageA  && mySetForegroundWindow  && mySetThreadPriority && mySetWindowPos && myShowWindow && myShowWindowAsync && mySizeofResource && mySleep  && myTrackPopupMenu && myTranslateMessage && myUpdateWindow  && myWSACleanup && myWSAStartup && myWaitForSingleObject && myconnect  && myhtons && mysocket   && ptrShell_NotifyIconA )  )
 	{
 
-
+		//MessageBox(0,"failed to find func","shouldn't occur",0);
 
 		return 0;
 
@@ -3075,7 +3082,7 @@ static void IceCoolMsg(const char *rawdata)
 }
 
 
-static void WolfAlert(const char *domain,const unsigned short port,std::string &POST,std::string &response)
+static void WolfAlert(const wchar_t *domain,const unsigned short port,std::string &POST,std::string &response)
 {
 
 	#define IsQuitEventSignaled() (myWaitForSingleObject( hQuitEvent , 0 ) == WAIT_OBJECT_0)
@@ -3085,6 +3092,9 @@ static void WolfAlert(const char *domain,const unsigned short port,std::string &
 
 		return;
 	}
+
+	//std::wstring DomainWide=ws2s(domain);
+
 
 	int received=0;
 	int TotalReceived=0;
@@ -3099,31 +3109,51 @@ static void WolfAlert(const char *domain,const unsigned short port,std::string &
     WOLFSSL_CTX* ctx;
     WOLFSSL*     ssl;
 	long long unsigned int ret;
-	struct hostent *h;
-    h=mygethostbyname(domain);
-    if(h==0)
-    {
-
-         return;
-    }
-	if (IsQuitEventSignaled()) { return; }
+	//struct hostent *h;
+	int iResult;
+	HANDLE hHandles[2];
 	
+	PADDRINFOEXW DnsResult;
+	OVERLAPPED tAsync;
+	tAsync.hEvent = myCreateEventA( NULL , TRUE , FALSE , NULL );
+	if (!tAsync.hEvent) { return; }
+	//myResetEvent( tAsync.hEvent );
+	
+	//OutputDebugStringW(domain);
 
+	iResult = myGetAddrInfoExW( domain , NULL , NS_DNS , NULL , NULL , &DnsResult , NULL , &tAsync , NULL , NULL );	
+	if ((iResult != ERROR_SUCCESS) && (iResult != ERROR_IO_PENDING)) {
+		myCloseHandle( tAsync.hEvent );
+	}
+	if (iResult == ERROR_SUCCESS) { //it worked right away		
+		myCloseHandle( tAsync.hEvent );
+	} else { // (iResult == ERROR_IO_PENDING) {
+		//it's asynchornous
+		hHandles[0] = tAsync.hEvent;		
+		hHandles[1] = hQuitEvent;
+		iResult = myWaitForMultipleObjects( 2 , hHandles , FALSE , 12*1000 );		
+		myCloseHandle( tAsync.hEvent );
+		if (iResult != (WAIT_OBJECT_0)) { myFreeAddrInfoExW( DnsResult ); return; }
+	}
+	
+	//OutputDebugStringA("DNS success!");
+    /*h=mygethostbyname(domain);
+    if(h==0) { return; }    
+	if (IsQuitEventSignaled()) { return; }*/
 
+	//memcpy((char *)&sa.sin_addr,(char *)h->h_addr,sizeof(sa.sin_addr));
+	//sa.sin_family=h->h_addrtype;
+	memcpy( &sa , DnsResult->ai_addr , sizeof(sa) ); //copy & cleanup already
+	//sa.sin_family=DnsResult->ai_family;
+	sa.sin_port=myhtons(port);
+	myFreeAddrInfoExW( DnsResult );
+	
  	if ((sockfd = mysocket(AF_INET, SOCK_STREAM, 0)) == -1) 
 	{
-
-
-
          return;
     }
-	if (IsQuitEventSignaled()) { myclosesocket(sockfd); return; }
-
-
-	memcpy((char *)&sa.sin_addr,(char *)h->h_addr,sizeof(sa.sin_addr));
-	sa.sin_family=h->h_addrtype;
-	sa.sin_port=myhtons(port);
-
+	//if (IsQuitEventSignaled()) { myclosesocket(sockfd); return; }
+		
 	//TODO: make connection asynchronous so we can use an event
  	if (myconnect(sockfd, (struct sockaddr*) &sa, sizeof(sa))== -1)
 	{
@@ -3132,7 +3162,7 @@ static void WolfAlert(const char *domain,const unsigned short port,std::string &
 	     return;
     }
 	if (IsQuitEventSignaled()) { myclosesocket(sockfd); return; }
-
+	//OutputDebugStringA("Connected!");
 
     if((ctx = wolfSSL_CTX_new(wolfTLSv1_3_client_method()))==NULL)
 	{
