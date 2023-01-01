@@ -1,10 +1,10 @@
 [Editors]
-Order=0
+Order=0,2
 Focused=0
 [Editor_0]
-CursorCol=5
-CursorRow=930
-TopLine=910
+CursorCol=26
+CursorRow=3341
+TopLine=3313
 LeftChar=1
 [Editor_1]
 CursorCol=1

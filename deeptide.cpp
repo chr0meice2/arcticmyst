@@ -112,7 +112,7 @@ static bool FirstRegHCKU=true;
 
 static std::string DeviceForC="";
 
-static const char VER_STRING[]="20221228a";
+static const char VER_STRING[]="20221231a";
 
 static const char UN_FULL[]="^\\x5cDevice\\x5cHarddiskVolume\\d+\\x5cprogramdata\\x5carcticmyst\\x5cunins000\\x2eexe$";
 static const char UN_SHORT[]="unins000.exe";
@@ -3106,11 +3106,10 @@ static void IceCoolMsg(const char *rawdata)
 
 }
 
-
 static void WolfAlert(const wchar_t *domain,const unsigned short port,std::string &POST,std::string &response)
 {
 
-	#define IsQuitEventSignaled() (myWaitForSingleObject( hQuitEvent , 0 ) == WAIT_OBJECT_0)
+	#define IsQuitEventSignaled() (myWaitForSingleObject(  hQuitEvent , 0 ) == WAIT_OBJECT_0)
 	
 	if(POST.empty())
 	{
@@ -3128,7 +3127,7 @@ static void WolfAlert(const wchar_t *domain,const unsigned short port,std::strin
      SOCKET              sockfd=INVALID_SOCKET;
     struct sockaddr_in sa{};
   	//memset(&sa, 0, sizeof(sa));
-    char               buff[256]{};
+    char               buff[16384]{};
    	//memset(buff, 0, sizeof(buff));
     //size_t             len;
     WOLFSSL_CTX* ctx = NULL;
@@ -3144,11 +3143,11 @@ static void WolfAlert(const wchar_t *domain,const unsigned short port,std::strin
 	OVERLAPPED tAsync = {};
 	u_long NonBlocking;
 	//int devid=0;
-	tAsync.hEvent = hAsyncEvent = myCreateEventA( NULL , TRUE , FALSE , NULL );
+	tAsync.hEvent = hAsyncEvent = myCreateEventA( NULL , TRUE , FALSE , NULL );	
 	if (!hAsyncEvent) { return; }
 
 	hHandles[0] = tAsync.hEvent;		
-	hHandles[1] = hQuitEvent;
+	hHandles[1] =  hQuitEvent;
 
 	//myResetEvent( tAsync.hEvent );
 	
@@ -3200,28 +3199,28 @@ static void WolfAlert(const wchar_t *domain,const unsigned short port,std::strin
 	}
 	if (!ConnectExPtr) { goto cleanup; }
 	
-	OutputDebugStringA("Connecting..");
+	//OutputDebugStringA("Connecting..");
 
 	myResetEvent( tAsync.hEvent ); //must reset the event to reuse it
     
 	memset( &tAsync , 0 , sizeof(tAsync) ); tAsync.hEvent = hAsyncEvent;
 	if (!ConnectExPtr(sockfd, (struct sockaddr*) &sa, sizeof(sa), NULL , 0 , &dwDummy , &tAsync )) {
-		iResult = myWSAGetLastError();
+		iResult = myWSAGetLastError();/*
 		{
 			char zBuff[64];
 			sprintf(zBuff,"Result = %i\n",iResult);
 			OutputDebugStringA(zBuff);
-		}
+		}*/
 		if ( iResult != ERROR_IO_PENDING ) { goto cleanup; }
-		OutputDebugStringA("Waiting...");		
+		//OutputDebugStringA("Waiting...");		
 		iResult = myWaitForMultipleObjects( 2 , hHandles , FALSE , 30*1000 );
 		if (iResult != (WAIT_OBJECT_0)) { goto cleanup; }		
-		OutputDebugStringA("myWSAGetOverlappedResult");
+		//OutputDebugStringA("myWSAGetOverlappedResult");
 		if (!myWSAGetOverlappedResult( sockfd , &tAsync , &dwDummy , TRUE , &dwDummy )) {
 			goto cleanup;
 		}		
  	}
-	OutputDebugStringA("Connected!");
+	//OutputDebugStringA("Connected!");
 
     if((ctx = wolfSSL_CTX_new(wolfTLSv1_3_client_method()))==NULL)	
 	{
@@ -3244,7 +3243,7 @@ static void WolfAlert(const wchar_t *domain,const unsigned short port,std::strin
 		goto cleanup;
     }	
 
-	OutputDebugString("Before Connect");
+	//OutputDebugString("Before Connect");
 	NonBlocking = 1; myioctlsocket( sockfd , FIONBIO , &NonBlocking );
 
 	/*
@@ -3258,54 +3257,66 @@ static void WolfAlert(const wchar_t *domain,const unsigned short port,std::strin
 	myWSAEventSelect( sockfd , hAsyncEvent , FD_READ | FD_CLOSE );
 
 	do {
-		OutputDebugString("trying to connect...");
+		//OutputDebugString("SSL connect...");
 		iResult = wolfSSL_connect(ssl);      		
   		err = wolfSSL_get_error(ssl, iResult);		
 		if (iResult == WOLFSSL_SUCCESS) { break; }
         if (err == WOLFSSL_ERROR_WANT_READ) {			
 			if (myWaitForMultipleObjects( 2 , hHandles , FALSE , 12*1000 ) != WAIT_OBJECT_0) {
-				OutputDebugStringA("Connect Timeout!");
+				//OutputDebugStringA("Connect Timeout!");
 				goto cleanup; 
 			}
 		}
     } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE); 
 	if (iResult != WOLFSSL_SUCCESS) {
-		OutputDebugString("failed to connect...");
+		//OutputDebugString("failed to connect...");
 		goto cleanup; 
 	}
 	//OutputDebugString("SSL_Connect Success");
-	
-	
 
 	NonBlocking = 0; myioctlsocket( sockfd , FIONBIO , &NonBlocking );
-	OutputDebugString("After Connect");
 	
-	ret = wolfSSL_write(ssl, POST.c_str(),POST.size());
+	//OutputDebugString("SSL Connected.");
+	
+	ret = wolfSSL_write(ssl, POST.c_str(),POST.size());	
 	if ( IsQuitEventSignaled() || (ret!=POST.size()) )
 	{
 		goto cleanup;
 	}
 
+	NonBlocking = 1; ioctlsocket( sockfd , FIONBIO , &NonBlocking );
 	myResetEvent( hAsyncEvent ); //reset for the first time
 	myWSAEventSelect( sockfd , hAsyncEvent , FD_READ | FD_CLOSE );
 	
 	while(1)
 	{
-		memset(buff,0x0,sizeof(buff));		
-		if (myWaitForMultipleObjects( 2 , hHandles , FALSE , 12*1000 ) != WAIT_OBJECT_0) {
-			OutputDebugStringA("Timeout!");
-			goto cleanup; 
-		}
+		memset(buff,0x0,sizeof(buff));
 		myResetEvent( hAsyncEvent ); //reset and do the action that re-trigger it.
-		received=wolfSSL_read(ssl,buff,sizeof(buff)-1);
+		
+		//OutputDebugStringA("Before wolfSSL read");
+		received=wolfSSL_read(ssl,buff,sizeof(buff)-1);		
 		if (received==-1) 
 		{
+			err = wolfSSL_get_error(ssl, received);			
+        	if (err == WOLFSSL_ERROR_WANT_READ) {
+				if (myWaitForMultipleObjects( 2 , hHandles , FALSE , 12*1000 ) != WAIT_OBJECT_0) {
+					//OutputDebugStringA("Timeout!");
+					goto cleanup; 
+				}		
+ 			continue; 
+			}
+			//OutputDebugStringA("-1 for received");
+			goto cleanup;
+		}
+		if(received==0) {
+			//OutputDebugString("Succesfully received!");
 			goto cleanup;
 		}
 		if(received>0)
 		{
 			response.append(buff,received);
 			TotalReceived+=received;
+			//OutputDebugStringA(std::to_string(TotalReceived).c_str() );			
 		}
 	}
 

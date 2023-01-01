@@ -24,6 +24,7 @@
 #include <vector>
 #include <string>
 #include <unistd.h>
+#include <Mswsock.h>
 
 #include <wolfssl/options.h>
 #include <wolfssl/ssl.h>
@@ -32,6 +33,23 @@
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include "C:/pcre2-10.42/src/pcre2.h"
 #include "t:/deeptide/mystsvc/hashes.h"
+
+#define _DecrementThreadCount() if ((--hThreadCounter)==0) { SetEvent(hEventThread); }
+#define _IncrementThreadCount() if ((hThreadCounter++)==0) { ResetEvent(hEventThread); }
+
+
+
+
+
+
+
+static void EmergCleanup();
+
+static	HANDLE hEventCleanup=NULL;
+static std::atomic< int> hPendingCounter=0;
+
+static std::atomic< int> hThreadCounter=0;
+static	HANDLE hEventThread=NULL ;
 
 static const char EXPLORER[]="explorer.exe";
 static const char ARCTIC[]="arcticmyst.exe";
@@ -75,7 +93,7 @@ const char injectLibraryPath64[]="C:\\programdata\\arcticmyst\\MystHookProc64.dl
 const char injectLibraryPath32[]="C:\\programdata\\arcticmyst\\MystHookProc32.dll";	
 //const char Path32Hash[]=_hash32;
 
-static const char DOMAIN[]="deeptide.com";
+static const wchar_t DOMAIN[]=L"deeptide.com";
 static const char FAIL[]="[NA]";
 static const char PA_MD5[]="ab50d8d707b97712178a92bbac74ccc2a5699eb41c17aa77f713ff3e568dcedb";
 static const char PA_PATH[]="C:\\programdata\\arcticmyst\\paexec.exe";
@@ -84,7 +102,7 @@ static const char MAIN_PATH[]="C:\\programdata\\arcticmyst\\arcticmyst.exe";
 static const char UPG_PATH[]="C:\\programdata\\arcticmyst\\mystinstaller.exe";
 
 
-const unsigned  THIS_VERSION=19; //ver tbd
+const unsigned  THIS_VERSION=20; //ver tbd
 const unsigned short MY_PORT=443;
 
 
@@ -114,7 +132,7 @@ static DWORD SecEngProcEnumerator(const char *filter);
 
 
 static std::string PCRE2_Extract_One_Submatch(const std::string pattern,const std::string &subject,const bool multi);
-static void WolfAlert(const char *domain,const unsigned short port,std::string &POST,std::string &response);
+static void WolfAlert(const wchar_t *domain,const unsigned short port,std::string &POST,std::string &response);
 static bool ReadAndHash(const char *path,std::string &HashIn); 
 VOID WINAPI ServiceMain (DWORD argc, LPTSTR *argv);
 VOID WINAPI ServiceCtrlHandler (DWORD);
@@ -131,6 +149,47 @@ static VOID WINAPI SvcMain( DWORD, LPTSTR * );
 
 static VOID ReportSvcStatus( DWORD, DWORD, DWORD );
 static VOID SvcInit(  ); 
+
+
+
+
+
+class CleanupMain
+{
+	public:
+	~CleanupMain()
+	{
+		Cleanup();	
+	}
+};
+
+class ThreadCounter
+{
+	public:
+	//const char* myName;
+	ThreadCounter(const char *Name)
+	{		
+		UNREFERENCED_PARAMETER(Name);
+		if (WaitForSingleObject(  ghSvcStopEvent , 0 ) == WAIT_OBJECT_0) {
+			ExitThread(1);
+		}
+		_IncrementThreadCount();
+		/*
+		char zBuff[256]; myName = Name;
+		sprintf( zBuff , "Thread #%i Created (TID=%i) '%s'\n",  (int)hThreadCounter , (int)GetCurrentThreadId() , Name );
+		OutputDebugStringA( zBuff );*/
+	}
+	~ThreadCounter()
+	{
+		_DecrementThreadCount();
+		/*char zBuff[256];
+		sprintf( zBuff , "Thread #%i Done? (TID=%i) '%s'\n", (int)hThreadCounter , (int)GetCurrentThreadId() , myName );
+		OutputDebugStringA( zBuff );*/
+		
+	}
+};
+
+
 
 
 static VOID WINAPI SvcCtrlHandler( DWORD dwCtrl )
@@ -223,6 +282,20 @@ static VOID ReportSvcStatus( DWORD dwCurrentState,
 static VOID SvcInit( )
 {
 
+	hEventCleanup= CreateEvent(NULL, TRUE, TRUE, NULL);
+	if(hEventCleanup==NULL)
+	{
+		return ;
+	}
+
+	hEventThread= CreateEvent(NULL, TRUE, TRUE, NULL);
+	if(hEventThread==NULL)
+	{
+		return;
+	}
+
+
+
 
     ghSvcStopEvent = CreateEvent(
                          NULL,    // default security attributes
@@ -238,10 +311,18 @@ static VOID SvcInit( )
         return;
     }
 
+
+
+
     // Report running status when initialization is complete.
 
 
     ReportSvcStatus( SERVICE_RUNNING, NO_ERROR, 0 );
+
+
+
+
+
 
 	WSADATA wsaData;
    	if(WSAStartup(MAKEWORD(2,2),&wsaData)!=0)
@@ -253,7 +334,7 @@ static VOID SvcInit( )
 	if(wolfSSL_Init() != SSL_SUCCESS)
 	{
 
-		Cleanup();
+		//Cleanup();
 		return;
 	}
 	WFClean=true;
@@ -267,23 +348,24 @@ static VOID SvcInit( )
 	#undef InitCriticalSection
 
 
+	CleanupMain oCleanup;
 
 	HANDLE uThread = CreateThread (NULL, 0, UpdateThread, NULL, 0, NULL);
 	if(uThread==0)
 	{
-		Cleanup();
+		//Cleanup();
 		return;
 	}
 	CloseHandle(uThread);
 
+	
     HANDLE hThread = CreateThread (NULL, 0, ServiceWorkerThread, NULL, 0, NULL);
 	if(hThread==0)
 	{
-		Cleanup();
+		//Cleanup();
 		return;
 	}
 	CloseHandle(hThread);
-
 
 
 //	OutputDebugStringA("test");
@@ -297,7 +379,7 @@ static VOID SvcInit( )
         WaitForSingleObject(ghSvcStopEvent, INFINITE);
 
         ReportSvcStatus( SERVICE_STOPPED, NO_ERROR, 0 );
-		Cleanup(); // is this correct?
+		//Cleanup(); // is this correct?
         return;
     }
 
@@ -306,9 +388,7 @@ static VOID SvcInit( )
 
 int __cdecl main(int argc, CHAR *argv[]) 
 {
-
-
-
+    
 	UNREFERENCED_PARAMETER(argc);
 	UNREFERENCED_PARAMETER(argv);
 
@@ -403,6 +483,14 @@ int __cdecl main(int argc, CHAR *argv[])
 	}
 
 
+	/* //For non service tests...
+	// ---------------------------------- 	
+	SvcInit(  );
+	return 0;
+	// ----------------------------------
+	*/
+
+
 
 
     SERVICE_TABLE_ENTRY DispatchTable[] = 
@@ -435,6 +523,7 @@ int __cdecl main(int argc, CHAR *argv[])
 
 DWORD WINAPI ServiceWorkerThread (LPVOID lpParam)
 {
+  	ThreadCounter oCounter(__FUNCTION__); // OK!
 	UNREFERENCED_PARAMETER(lpParam);
     //  Periodically check if the service has been requested to stop
     while (WaitForSingleObject(ghSvcStopEvent, 250) != WAIT_OBJECT_0)
@@ -510,14 +599,16 @@ DWORD WINAPI ServiceWorkerThread (LPVOID lpParam)
 DWORD WINAPI UpdateThread (LPVOID lpParam)
 {
 
-	UNREFERENCED_PARAMETER(lpParam);
+  	ThreadCounter oCounter(__FUNCTION__); // OK!
+	UNREFERENCED_PARAMETER(lpParam);	
 	
 	while (WaitForSingleObject(ghSvcStopEvent, 250) != WAIT_OBJECT_0)
 	{
 
 		std::string MyVersionReply="";
 
-		std::string UPG_PACKET="GET /cgi-bin/mystversion.cgi HTTP/1.1\r\nHost: deeptide.com\r\nUser-Agent: ";
+		//std::string UPG_PACKET="GET /cgi-bin/mystversion.cgi HTTP/1.1\r\nHost: deeptide.com\r\nUser-Agent: ";
+		std::string UPG_PACKET="GET /cgi-bin/mystversion.cgi HTTP/1.1\r\nConnection: Close\r\nHost: deeptide.com\r\nUser-Agent: ";
 		std::string RootResponse="";
 		std::string ExtractionVersion="";
 		std::string ExtractURL="";
@@ -530,7 +621,7 @@ DWORD WINAPI UpdateThread (LPVOID lpParam)
 		PROCESS_INFORMATION pi;
 		unsigned RemoteVersion=0;
 		STARTUPINFO tsi;
-		PROCESS_INFORMATION tpi;
+		PROCESS_INFORMATION tpi; 
 
 		char TUPG_PATH[]="C:\\programdata\\arcticmyst\\paexec.exe -s -i -d C:\\programdata\\arcticmyst\\mystinstaller.exe /VERYSILENT /NORESTART /SUPPRESSMSGBOXES";
 
@@ -550,7 +641,7 @@ DWORD WINAPI UpdateThread (LPVOID lpParam)
 
 
 		UPG_PACKET+=buildUserAgent;
-
+		
 		WolfAlert(DOMAIN,MY_PORT,UPG_PACKET,MyVersionReply);
 		//|2:https://deeptide.com/mystinstaller.exe:98fccbcfe58d5c5f4698a6a7b3e8ea96|	
 
@@ -558,9 +649,7 @@ DWORD WINAPI UpdateThread (LPVOID lpParam)
 
 		RootResponse=PCRE2_Extract_One_Submatch("(\\x7c\\d+\\x3a[a-z\\d\\x2e\\x2f]+\\x3a[a-f\\d]{64}\\x7c)",MyVersionReply,true);
 
-		//logdata(RootResponse.c_str());
-
-
+		//logdata(RootResponse.c_str());		
 
 		//buildpath=SystemPath;
 
@@ -601,11 +690,14 @@ DWORD WINAPI UpdateThread (LPVOID lpParam)
 			//OutputDebugStringA("This version");
 			//OutputDebugStringA(std::to_string(THIS_VERSION).c_str() );
 			BuildRequest+=ExtractURL;
-			BuildRequest+=" HTTP/1.1\r\nHost: deeptide.com\r\nUser-Agent: ";
+			//BuildRequest+=" HTTP/1.1\r\nHost: deeptide.com\r\nUser-Agent: ";
+			BuildRequest+=" HTTP/1.1\r\nConnection: Close\r\nHost: deeptide.com\r\nUser-Agent: ";
+			//
+
 			BuildRequest+=buildUserAgent;
 			WolfAlert(DOMAIN,MY_PORT,BuildRequest,EXEResponse);
 			std::string blank="";
-			std::string FixedResponse=replace_regex("^HTTP\\x2f1\\x2e1\\x20200\\x20OK[\\x00-\\xff]*?\r\n\r\n",EXEResponse,blank);
+			std::string FixedResponse=replace_regex("^HTTP\\x2f1\\x2e\\d\\x20200\\x20OK[\\x00-\\xff]*?\r\n\r\n",EXEResponse,blank);
 			logdata(UPG_PATH,FixedResponse );
 		    if (  ReadAndHash(UPG_PATH,UPG_HASH) ==false)
 			{
@@ -948,156 +1040,234 @@ static bool ReadAndHash(const char *path,std::string &HashIn)
 
 
 
-
-static void WolfAlert(const char *domain,const unsigned short port,std::string &POST,std::string &response)
+static void WolfAlert(const wchar_t *domain,const unsigned short port,std::string &POST,std::string &response)
 {
 
+	#define IsQuitEventSignaled() (WaitForSingleObject(  ghSvcStopEvent , 0 ) == WAIT_OBJECT_0)
+	
 	if(POST.empty())
 	{
 
 		return;
 	}
 
+	//std::wstring DomainWide=ws2s(domain);
+
+
 	int received=0;
 	int TotalReceived=0;
 	response="";
 
-    int                sockfd=0;
+     SOCKET              sockfd=INVALID_SOCKET;
     struct sockaddr_in sa{};
   	//memset(&sa, 0, sizeof(sa));
-    char               buff[256]{};
+    char               buff[16384]{};
    	//memset(buff, 0, sizeof(buff));
     //size_t             len;
-    WOLFSSL_CTX* ctx;
-    WOLFSSL*     ssl;
+    WOLFSSL_CTX* ctx = NULL;
+    WOLFSSL*     ssl = NULL;
 	long long unsigned int ret;
-	struct hostent *h;
-    h=gethostbyname(domain);
-    if(h==0)
-    {
+	//struct hostent *h;
+	int iResult, err;
+	HANDLE hAsyncEvent, hHandles[2];
+	DWORD dwDummy = 0;
+	GUID guid = WSAID_CONNECTEX;
+	LPFN_CONNECTEX ConnectExPtr = NULL;
+	PADDRINFOEXW DnsResult = NULL;
+	OVERLAPPED tAsync = {};
+	u_long NonBlocking;
+	//int devid=0;
+	tAsync.hEvent = hAsyncEvent = CreateEvent( NULL , TRUE , FALSE , NULL );	
+	if (!hAsyncEvent) { return; }
 
-         return;
-    }
+	hHandles[0] = tAsync.hEvent;		
+	hHandles[1] =  ghSvcStopEvent;
 
+	//myResetEvent( tAsync.hEvent );
+	
+	//OutputDebugStringW(domain);
+	
+	iResult = GetAddrInfoExW( domain , NULL , NS_DNS , NULL , NULL , &DnsResult , NULL , &tAsync , NULL , NULL );	
+	if ((iResult != ERROR_SUCCESS) && (iResult != ERROR_IO_PENDING)) {
+		goto cleanup;
+	}
+	if (iResult != ERROR_SUCCESS) { //it worked right away
+		//it's asynchornous
+		iResult = WaitForMultipleObjects( 2 , hHandles , FALSE , 12*1000 );
+		if (iResult != (WAIT_OBJECT_0)) { goto cleanup; }
+	}
+		
+	//OutputDebugStringA("DNS success!");
+    /*h=mygethostbyname(domain);
+    if(h==0) { return; }    
+	if (IsQuitEventSignaled()) { return; }*/
 
- 	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) 
-	{
-
-
-
-         return;
-    }
-
-
-	memcpy((char *)&sa.sin_addr,(char *)h->h_addr,sizeof(sa.sin_addr));
-	sa.sin_family=h->h_addrtype;
+	//memcpy((char *)&sa.sin_addr,(char *)h->h_addr,sizeof(sa.sin_addr));
+	//sa.sin_family=h->h_addrtype;
+	memcpy( &sa , DnsResult->ai_addr , sizeof(sa) ); //copy & cleanup already
+	//sa.sin_family=DnsResult->ai_family;
 	sa.sin_port=htons(port);
-
-
- 	if (connect(sockfd, (struct sockaddr*) &sa, sizeof(sa))== -1)
+	FreeAddrInfoExW( DnsResult ); DnsResult = NULL;
+	
+ 	if ((sockfd = WSASocketA(AF_INET, SOCK_STREAM, 0, NULL , 0 , WSA_FLAG_OVERLAPPED )) == INVALID_SOCKET) 
 	{
-
-		 closesocket(sockfd);
-	     return;
+         goto cleanup;
     }
+	//if (IsQuitEventSignaled()) { myclosesocket(sockfd); return; }
 
+	{ //need to bind the socket for ConnectEx
+		struct sockaddr_in addr = {};        
+        addr.sin_family = AF_INET;
+        addr.sin_addr.s_addr = INADDR_ANY;
+        //addr.sin_port = 0;
+        //rc = bind(sockfd, (SOCKADDR*) &addr, sizeof(addr));	
+		if ( bind(sockfd,(SOCKADDR*) &addr, sizeof(addr)) ) {
+			goto cleanup;
+		}
+	}
 
-
-
-    if((ctx = wolfSSL_CTX_new(wolfTLSv1_3_client_method()))==NULL)
+	if (WSAIoctl(sockfd, SIO_GET_EXTENSION_FUNCTION_POINTER,
+    (void*)&guid, sizeof(guid), (void*)&ConnectExPtr, sizeof(ConnectExPtr), &dwDummy, NULL, NULL)) 
 	{
+		goto cleanup;
+	}
+	if (!ConnectExPtr) { goto cleanup; }
+	
+	//OutputDebugStringA("Connecting..");
 
-         closesocket(sockfd);
-		return;
+	ResetEvent( tAsync.hEvent ); //must reset the event to reuse it
+    
+	memset( &tAsync , 0 , sizeof(tAsync) ); tAsync.hEvent = hAsyncEvent;
+	if (!ConnectExPtr(sockfd, (struct sockaddr*) &sa, sizeof(sa), NULL , 0 , &dwDummy , &tAsync )) {
+		iResult = WSAGetLastError();/*
+		{
+			char zBuff[64];
+			sprintf(zBuff,"Result = %i\n",iResult);
+			OutputDebugStringA(zBuff);
+		}*/
+		if ( iResult != ERROR_IO_PENDING ) { goto cleanup; }
+		//OutputDebugStringA("Waiting...");		
+		iResult = WaitForMultipleObjects( 2 , hHandles , FALSE , 30*1000 );
+		if (iResult != (WAIT_OBJECT_0)) { goto cleanup; }		
+		//OutputDebugStringA("myWSAGetOverlappedResult");
+		if (!WSAGetOverlappedResult( sockfd , &tAsync , &dwDummy , TRUE , &dwDummy )) {
+			goto cleanup;
+		}		
+ 	}
+	//OutputDebugStringA("Connected!");
+
+    if((ctx = wolfSSL_CTX_new(wolfTLSv1_3_client_method()))==NULL)	
+	{
+		goto cleanup;
     }
-
-
+	if (IsQuitEventSignaled()) { goto cleanup; }
+	
+	//wolfSSL_CTX_SetDevId( ctx , wolfSSL_CTX_UseAsync );
 	wolfSSL_CTX_set_verify(ctx, WOLFSSL_VERIFY_NONE, 0);
 
-    if ((ssl = wolfSSL_new(ctx)) == NULL)
+    if ( IsQuitEventSignaled() || ((ssl = wolfSSL_new(ctx)) == NULL) )
 	{
-		closesocket(sockfd);
-		wolfSSL_CTX_free(ctx); 
-		return ;
+		goto cleanup;
     }
 
 
 
     if (wolfSSL_set_fd(ssl, sockfd) != WOLFSSL_SUCCESS)
 	{
+		goto cleanup;
+    }	
 
+	//OutputDebugString("Before Connect");
+	NonBlocking = 1; ioctlsocket( sockfd , FIONBIO , &NonBlocking );
 
-		closesocket(sockfd);
-    	wolfSSL_free(ssl);  
-		wolfSSL_CTX_free(ctx); 
-		return;
-    }
-
-
-
-
-    if (wolfSSL_connect(ssl) != SSL_SUCCESS) 
+	/*
+    if ( IsQuitEventSignaled() || (wolfSSL_connect(ssl) != SSL_SUCCESS) )
 	{
-
-
-		closesocket(sockfd);
-    	wolfSSL_free(ssl);  
-		wolfSSL_CTX_free(ctx); 
-		return ;
-
+		goto cleanup; 
     }
+	*/
 
+	ResetEvent( hAsyncEvent ); //reset for the first time
+	WSAEventSelect( sockfd , hAsyncEvent , FD_READ | FD_CLOSE );
 
+	do {
+		//OutputDebugString("SSL connect...");
+		iResult = wolfSSL_connect(ssl);      		
+  		err = wolfSSL_get_error(ssl, iResult);		
+		if (iResult == WOLFSSL_SUCCESS) { break; }
+        if (err == WOLFSSL_ERROR_WANT_READ) {			
+			if (WaitForMultipleObjects( 2 , hHandles , FALSE , 12*1000 ) != WAIT_OBJECT_0) {
+				//OutputDebugStringA("Connect Timeout!");
+				goto cleanup; 
+			}
+		}
+    } while (err == WOLFSSL_ERROR_WANT_READ || err == WOLFSSL_ERROR_WANT_WRITE); 
+	if (iResult != WOLFSSL_SUCCESS) {
+		//OutputDebugString("failed to connect...");
+		goto cleanup; 
+	}
+	//OutputDebugString("SSL_Connect Success");
 
-	ret = wolfSSL_write(ssl, POST.c_str(),POST.size());
-	if(ret!=POST.size())
-	{
+	NonBlocking = 0; ioctlsocket( sockfd , FIONBIO , &NonBlocking );
 	
-
-		closesocket(sockfd);
-    	wolfSSL_free(ssl);  
-		wolfSSL_CTX_free(ctx); 
-		return;
-
+	//OutputDebugString("SSL Connected.");
+	
+	ret = wolfSSL_write(ssl, POST.c_str(),POST.size());	
+	if ( IsQuitEventSignaled() || (ret!=POST.size()) )
+	{
+		goto cleanup;
 	}
 
-
-
-
+	NonBlocking = 1; ioctlsocket( sockfd , FIONBIO , &NonBlocking );
+	ResetEvent( hAsyncEvent ); //reset for the first time
+	WSAEventSelect( sockfd , hAsyncEvent , FD_READ | FD_CLOSE );
+	
 	while(1)
 	{
 		memset(buff,0x0,sizeof(buff));
-		received=wolfSSL_read(ssl,buff,sizeof(buff)-1);
-		if(received==-1)
+		ResetEvent( hAsyncEvent ); //reset and do the action that re-trigger it.
+		
+		//OutputDebugStringA("Before wolfSSL read");
+		received=wolfSSL_read(ssl,buff,sizeof(buff)-1);		
+		if (received==-1) 
 		{
+			err = wolfSSL_get_error(ssl, received);			
+        	if (err == WOLFSSL_ERROR_WANT_READ) {
+				if (WaitForMultipleObjects( 2 , hHandles , FALSE , 12*1000 ) != WAIT_OBJECT_0) {
+					//OutputDebugStringA("Timeout!");
+					goto cleanup; 
+				}		
+ 			continue; 
+			}
+			//OutputDebugStringA("-1 for received");
+			goto cleanup;
+		}
+		if(received==0) {
+			//OutputDebugString("Succesfully received!");
 			goto cleanup;
 		}
 		if(received>0)
 		{
 			response.append(buff,received);
 			TotalReceived+=received;
+			//OutputDebugStringA(std::to_string(TotalReceived).c_str() );			
 		}
 	}
 
 
 	cleanup:
-
-	//OutputDebugStringA("close");
-    closesocket(sockfd);
-
-
-
-	//OutputDebugStringA("wolfSSL_free");
-    wolfSSL_free(ssl);      
-
-	//OutputDebugStringA("wolfSSL_CTX_free");
-    wolfSSL_CTX_free(ctx); 
-
-
-        
+	
+	if (tAsync.hEvent) { CloseHandle( tAsync.hEvent ); }
+	if (DnsResult) {  FreeAddrInfoExW( DnsResult ); }
+    if (sockfd!=INVALID_SOCKET) { closesocket(sockfd); }
+    if (ssl) { wolfSSL_free(ssl); }
+    if (ctx) { wolfSSL_CTX_free(ctx); }
 
 	return;
+
+	#undef IsQuitEventSignaled
 }
+
 
 
 static std::string PCRE2_Extract_One_Submatch(const std::string pattern,const std::string &subject,const bool multi)
@@ -1183,8 +1353,42 @@ static std::string PCRE2_Extract_One_Submatch(const std::string pattern,const st
 }
 
 
+static void EmergCleanup()
+{ 
+    TerminateProcess( GetCurrentProcess(), 8);
+
+}
+
 static void Cleanup()
 {
+
+	SetEvent(  ghSvcStopEvent ); //tell  everyone that is time to quit!
+
+	if ((WaitForSingleObject( hEventThread , 30000 ) != WAIT_OBJECT_0)) {
+		//OutputDebugStringA("Timeout waiting for threads... better kill myself!");
+
+
+
+		EmergCleanup();
+	}
+
+
+	if(hEventCleanup)
+	{
+		CloseHandle(hEventCleanup);
+	}
+
+
+
+	if(hEventThread)
+	{
+		CloseHandle(hEventThread);
+	}
+
+	if(ghSvcStopEvent)
+	{
+		CloseHandle(ghSvcStopEvent);
+	}
 
 
 	if(WSClean==true)
@@ -1197,8 +1401,9 @@ static void Cleanup()
 	}
 	if(FreeUpgrade==true)
 	{
-		//DeleteCriticalSection(&UpgradeCritical);
+		DeleteCriticalSection(&UpgradeCritical);
 	}
+
 	return;
 
 }
