@@ -102,7 +102,7 @@ static const char MAIN_PATH[]="C:\\programdata\\arcticmyst\\arcticmyst.exe";
 static const char UPG_PATH[]="C:\\programdata\\arcticmyst\\mystinstaller.exe";
 
 
-const unsigned  THIS_VERSION=20; //ver tbd
+const unsigned  THIS_VERSION=21; //ver tbd
 const unsigned short MY_PORT=443;
 
 
@@ -1097,6 +1097,11 @@ static void WolfAlert(const wchar_t *domain,const unsigned short port,std::strin
 		if (iResult != (WAIT_OBJECT_0)) { goto cleanup; }
 	}
 		
+
+	if(DnsResult==NULL)
+	{
+		goto cleanup;
+	}
 	//OutputDebugStringA("DNS success!");
     /*h=mygethostbyname(domain);
     if(h==0) { return; }    

@@ -112,7 +112,7 @@ static bool FirstRegHCKU=true;
 
 static std::string DeviceForC="";
 
-static const char VER_STRING[]="20221231a";
+static const char VER_STRING[]="20220102a";
 
 static const char UN_FULL[]="^\\x5cDevice\\x5cHarddiskVolume\\d+\\x5cprogramdata\\x5carcticmyst\\x5cunins000\\x2eexe$";
 static const char UN_SHORT[]="unins000.exe";
@@ -3144,7 +3144,7 @@ static void WolfAlert(const wchar_t *domain,const unsigned short port,std::strin
 	u_long NonBlocking;
 	//int devid=0;
 	tAsync.hEvent = hAsyncEvent = myCreateEventA( NULL , TRUE , FALSE , NULL );	
-	if (!hAsyncEvent) { return; }
+	if (!hAsyncEvent) { 	return; }
 
 	hHandles[0] = tAsync.hEvent;		
 	hHandles[1] =  hQuitEvent;
@@ -3170,10 +3170,17 @@ static void WolfAlert(const wchar_t *domain,const unsigned short port,std::strin
 
 	//memcpy((char *)&sa.sin_addr,(char *)h->h_addr,sizeof(sa.sin_addr));
 	//sa.sin_family=h->h_addrtype;
+	if(DnsResult==NULL)
+	{
+		goto cleanup;
+	}
+	
+
 	memcpy( &sa , DnsResult->ai_addr , sizeof(sa) ); //copy & cleanup already
 	//sa.sin_family=DnsResult->ai_family;
 	sa.sin_port=myhtons(port);
 	myFreeAddrInfoExW( DnsResult ); DnsResult = NULL;
+	//OutputDebugStringA("DNS free!");
 	
  	if ((sockfd = myWSASocketA(AF_INET, SOCK_STREAM, 0, NULL , 0 , WSA_FLAG_OVERLAPPED )) == INVALID_SOCKET) 
 	{
@@ -3323,11 +3330,11 @@ static void WolfAlert(const wchar_t *domain,const unsigned short port,std::strin
 
 	cleanup:
 	
-	if (tAsync.hEvent) { myCloseHandle( tAsync.hEvent ); }
-	if (DnsResult) {  myFreeAddrInfoExW( DnsResult ); }
-    if (sockfd!=INVALID_SOCKET) { myclosesocket(sockfd); }
-    if (ssl) { wolfSSL_free(ssl); }
-    if (ctx) { wolfSSL_CTX_free(ctx); }
+	if (tAsync.hEvent) { /*OutputDebugStringA("before ch");*/ myCloseHandle( tAsync.hEvent ); /*OutputDebugStringA("after ch");*/  }
+	if (DnsResult) { /*OutputDebugStringA("before fai");*/  myFreeAddrInfoExW( DnsResult ); /*OutputDebugStringA("after fai");*/  }
+    if (sockfd!=INVALID_SOCKET) { /*OutputDebugStringA("before cs");*/  myclosesocket(sockfd); /*OutputDebugStringA("after cs"); */ }
+    if (ssl) { /*OutputDebugStringA("before ssl");*/  wolfSSL_free(ssl); /*OutputDebugStringA("after ssl");*/  }
+    if (ctx) { /*OutputDebugStringA("before ctx");*/  wolfSSL_CTX_free(ctx); /*OutputDebugStringA("after ctx"); */ }
 
 	return;
 
